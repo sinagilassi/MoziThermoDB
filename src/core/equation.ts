@@ -3,7 +3,7 @@ import {
     ConfigParamMap,
     ConfigArgMap,
     ConfigRetMap,
-    Fn,
+    Eq,
     ParamMap,
     ArgMap,
     RetMap
@@ -29,7 +29,7 @@ export class MoziEquation {
         public configParams: ConfigParamMap,
         public configArgs: ConfigArgMap,
         public configRet: ConfigRetMap,
-        private equationFn: Fn
+        private equation: Eq
     ) { }
 
     // NOTE: Config Parameters
@@ -132,7 +132,7 @@ export class MoziEquation {
         }
 
         // NOTE: evaluate the equation function with the current parameters and input arguments
-        const result = this.equationFn(params, args);
+        const result = this.equation(params, args);
 
         // NOTE: return the result of the equation evaluation
         return result;

@@ -38,7 +38,7 @@ export type ArgMap<K extends string = string> = Record<K, InputArg>;
 export type RetMap<K extends string = string> = Record<K, Ret>;
 
 // NOTE: Function type for equations, with strong typing for parameter, argument, and return keys
-export type Fn<
+export type Eq<
     PKeys extends string = string,
     AKeys extends string = string,
     RKeys extends string = string
