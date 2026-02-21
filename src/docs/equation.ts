@@ -1,4 +1,10 @@
 // import libs
+import {
+    Component,
+    ComponentKey,
+    set_component_id
+} from 'mozithermodb-settings';
+// ! LOCALS
 import { MoziEquation } from "@/core";
 import {
     ConfigParamMap,
@@ -6,6 +12,8 @@ import {
     ConfigRetMap,
     Eq
 } from '@/types';
+
+export type ComponentMoziEquation = Record<string, MoziEquation>;
 
 
 /**
@@ -84,3 +92,24 @@ export const createEquation = function (
         equation
     );
 }
+
+export const configureEquation = function (
+    component: Component,
+    equation: MoziEquation,
+    data: { name: string; value: number; unit: string }[],
+    componentKey: ComponentKey = "Name-Formula"
+): ComponentMoziEquation {
+    // NOTE: set component ID for logging
+    const component_id = set_component_id(component, componentKey);
+    console.log(`Configuring equation for component: ${component_id}`);
+
+    // NOTE: configure the equation with the provided data
+    equation.configure(data);
+
+    // NOTE: return the configured equation instance
+    return {
+        component_id: equation
+    }
+}
+
+

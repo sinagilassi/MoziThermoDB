@@ -9,13 +9,6 @@ import {
     RetMap
 } from '@/types';
 
-// NOTE: payload
-export interface ComponentData {
-    name: string;
-    value: number;
-    unit: string;
-}
-
 
 export class MoziEquation {
     // SECTION: Attributes
@@ -76,7 +69,7 @@ export class MoziEquation {
 
     // SECTION: Set Equation Parameters
     private setParams(
-        data: ComponentData[],
+        data: { name: string; value: number; unit: string }[],
     ) {
         // NOTE: reset parameters
         const params: ParamMap = {};
@@ -110,13 +103,6 @@ export class MoziEquation {
         return params;
     }
 
-    // SECTION: Initialization Equation
-    private calcConfig(
-        data: ComponentData[],
-    ) {
-        this.params = this.setParams(data);
-    }
-
     // SECTION: Evaluation Equation
     private calc(args: ArgMap) {
         // NOTE: parameter setup
@@ -139,9 +125,9 @@ export class MoziEquation {
     }
 
     // SECTION: Retrieve Equation
-    retrieve(data: ComponentData[]) {
+    configure(data: { name: string; value: number; unit: string }[]) {
         // NOTE: initialize the equation with the provided data
-        this.calcConfig(data);
+        this.params = this.setParams(data);
 
         // NOTE: return an object with the equation's name, description, and a function to evaluate it
         return {
