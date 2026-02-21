@@ -3,8 +3,9 @@
 // Y = A + B*(C/T / sinh(C/T))^2 + D*(E/T / cosh(E/T))^2
 // Units: J/(kmol*K)
 
-import { createEquation } from "../src/docs/equation";
+import { createEquation, configureEquation } from "../src/docs/equation";
 import type { Eq, ConfigParamMap, ConfigArgMap, ConfigRetMap } from "../src/types";
+import type { Component } from "mozithermodb-settings";
 
 type P = "A" | "B" | "C" | "D" | "E";
 type A = "T";
@@ -23,7 +24,7 @@ const args: ConfigArgMap<A> = {
 };
 
 const ret: ConfigRetMap<R> = {
-  Cp: { name: "Heat Capacity (ideal gas)", symbol: "Cp", unit: "J/kmol.K" }
+  Cp: { name: "Heat Capacity (ideal gas)", symbol: "Cp", unit: "J/kmol*K" }
 };
 
 const eq: Eq<P, A, R> = (p, a) => {
@@ -35,7 +36,7 @@ const eq: Eq<P, A, R> = (p, a) => {
   const Cp = p.A.value + p.B.value * termB + p.D.value * termD;
 
   return {
-    Cp: { value: Cp, unit: "J/kmol.K", symbol: "Cp" }
+    Cp: { value: Cp, unit: "J/kmol*K", symbol: "Cp" }
   };
 };
 
@@ -48,19 +49,32 @@ const methaneCp = createEquation(
   eq
 );
 
-// Initialize with coefficient values (from attached data)
-const Cp_eq = methaneCp.config([
-  { name: "A", value: 33298, unit: "J/kmol.K" },
-  { name: "B", value: 79933, unit: "J/kmol.K" },
-  { name: "C", value: 2086.9, unit: "K" },
-  { name: "D", value: 41602, unit: "J/kmol.K" },
-  { name: "E", value: 991.96, unit: "K" }
-]);
+const component = {
+  name: "Methane",
+  formula: "CH4",
+  state: 'g'
+} as Component;
 
-// Evaluate at temperature (K)
-const result = Cp_eq.calc({
-  T: { value: 300, unit: "K", symbol: "T" }
+const componentId = "Methane-CH4";
+
+// Initialize with coefficient values (from attached data)
+const configured = configureEquation(
+  component,
+  methaneCp, [
+  { name: "A", value: 33298, unit: "J/kmol*K" },
+  { name: "B", value: 79933, unit: "J/kmol*K" },
+  { name: "C", value: 2086.9, unit: "K" },
+  { name: "D", value: 41602, unit: "J/kmol*K" },
+  { name: "E", value: 991.96, unit: "K" }
+],
+  "Name-Formula"
+);
+
+const componentEq = configured[componentId];
+
+// Evaluate with argument values
+const result = componentEq.calc({
+  T: { value: 298.15, unit: "K", symbol: "T" }
 });
 
-// result.Cp.value -> J/kmol*K
 console.log(result);

@@ -13,7 +13,7 @@ import {
     Eq
 } from '@/types';
 
-export type ComponentMoziEquation = Record<string, MoziEquation>;
+export type ComponentMoziEquation = { [key: string]: MoziEquation };
 
 
 /**
@@ -93,6 +93,33 @@ export const createEquation = function (
     );
 }
 
+/**
+ * Configure an equation instance with component-specific parameter data and
+ * return a map keyed by the resolved component id.
+ *
+ * Purpose
+ * - Attach the equation to a component id (for logging and lookup)
+ * - Initialize the equation with parameter values (via `equation.configure`)
+ *
+ * Notes
+ * - `data` must include all parameters required by `equation.configParameters`
+ * - `componentKey` controls the component id format (default: `"Name-Formula"`)
+ *
+ * Returns
+ * - An object shaped as `{ [component_id]: MoziEquation }`
+ *
+ * Example
+ * ```ts
+ * const configured = configureEquation(component, equation, [
+ *   { name: "A", value: 33298, unit: "J/kmol*K" },
+ *   { name: "B", value: 79933, unit: "J/kmol*K" },
+ *   { name: "C", value: 2086.9, unit: "K" },
+ *   { name: "D", value: 41602, unit: "J/kmol*K" },
+ *   { name: "E", value: 991.96, unit: "K" }
+ * ]);
+ * // configured["Methane-Formula"] -> MoziEquation
+ * ```
+ */
 export const configureEquation = function (
     component: Component,
     equation: MoziEquation,
@@ -106,10 +133,11 @@ export const configureEquation = function (
     // NOTE: configure the equation with the provided data
     equation.configure(data);
 
-    // NOTE: return the configured equation instance
-    return {
-        component_id: equation
+    // NOTE: create a map with the component ID as the key and the configured equation as the value
+    const res = {
+        [component_id]: equation
     }
+
+    // NOTE: return the configured equation instance
+    return res;
 }
-
-
