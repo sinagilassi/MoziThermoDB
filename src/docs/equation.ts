@@ -13,7 +13,8 @@ import {
     Eq,
     ArgMap,
     RetMap,
-    Awaitable
+    Awaitable,
+    ThermoRecord
 } from '@/types';
 
 // NOTE: Type for the map returned by `configureEquation`, keyed by component ID
@@ -31,7 +32,7 @@ export interface LaunchEquationAsync {
 }
 
 /**
- * SECTION: Create a typed equation definition that can be initialized with parameters
+ * Create a typed equation definition that can be initialized with parameters
  * and later evaluated with arguments.
  *
  * Purpose
@@ -108,7 +109,7 @@ export const createEq = function (
 }
 
 /**
- * SECTION: Configure an equation instance with component-specific parameter data and
+ * Configure an equation instance with component-specific parameter data and
  * return a map keyed by the resolved component id.
  *
  * Purpose
@@ -137,7 +138,7 @@ export const createEq = function (
 export const configureEq = function (
     component: Component,
     equation: MoziEquation,
-    data: { name: string; symbol: string; value: number; unit: string }[],
+    data: ThermoRecord[],
     componentKey: ComponentKey = "Name-Formula"
 ): ComponentMoziEquation {
     // NOTE: set component ID for logging
@@ -157,7 +158,7 @@ export const configureEq = function (
 }
 
 /**
- * SECTION: Create, configure, and immediately evaluate an equation.
+ * Create, configure, and immediately evaluate an equation.
  *
  * Purpose
  * - One-shot helper when you don't need to keep the equation instance
@@ -197,7 +198,7 @@ export const launchEq = function (
     configArgs: ConfigArgMap,
     configRet: ConfigRetMap,
     equation: Eq,
-    data: { name: string; symbol: string; value: number; unit: string }[],
+    data: ThermoRecord[],
     args: ArgMap
 ): LaunchEquation {
     // NOTE: create the equation instance
@@ -223,6 +224,40 @@ export const launchEq = function (
     }
 }
 
+/**
+ * Create, configure, and immediately evaluate an equation (async).
+ *
+ * Purpose
+ * - One-shot helper for equations that return a Promise
+ * - Useful when the equation needs async work (e.g., remote data)
+ *
+ * Notes
+ * - `data` must include all parameters required by `configParams`
+ * - `args` must include all arguments required by `configArgs`
+ *
+ * Returns
+ * - An object with the equation instance and the evaluated result
+ *
+ * Example
+ * ```ts
+ * const { result } = await launchEqAsync(
+ *   "Ideal Gas Z",
+ *   "Computes compressibility factor Z",
+ *   params,
+ *   args,
+ *   ret,
+ *   asyncEq,
+ *   [
+ *     { name: "Temperature", symbol: "T", value: 298.15, unit: "K" },
+ *     { name: "Pressure", symbol: "P", value: 101325, unit: "Pa" }
+ *   ],
+ *   {
+ *     n: { value: 1, unit: "mol", symbol: "n" },
+ *     V: { value: 0.024465, unit: "m^3", symbol: "V" }
+ *   }
+ * );
+ * ```
+ */
 export const launchEqAsync = function (
     name: string,
     description: string,
@@ -230,7 +265,7 @@ export const launchEqAsync = function (
     configArgs: ConfigArgMap,
     configRet: ConfigRetMap,
     equation: Eq,
-    data: { name: string; symbol: string; value: number; unit: string }[],
+    data: ThermoRecord[],
     args: ArgMap
 ): Promise<LaunchEquationAsync> {
     return (async () => {

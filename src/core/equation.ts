@@ -1,4 +1,5 @@
 // import libs
+// ! LOCALS
 import {
     ConfigParamMap,
     ConfigArgMap,
@@ -6,7 +7,8 @@ import {
     Eq,
     ParamMap,
     ArgMap,
-    RetMap
+    RetMap,
+    ThermoRecord
 } from '@/types';
 import { timeIt } from '@/utils';
 
@@ -76,7 +78,7 @@ export class MoziEquation {
 
     // SECTION: Set Equation Parameters
     private setParams(
-        data: { name: string; symbol: string; value: number; unit: string }[],
+        data: ThermoRecord[],
     ) {
         // NOTE: reset parameters
         const params: ParamMap = {};
@@ -112,7 +114,7 @@ export class MoziEquation {
 
     // SECTION: Extract Min/Max Ranges from data (e.g., Tmin/Tmax)
     private extractRanges(
-        data: { name: string; symbol: string; value: number; unit: string }[],
+        data: ThermoRecord[],
     ) {
         const argSymbols = this.argumentSymbolList;
 
@@ -218,7 +220,7 @@ export class MoziEquation {
     }
 
     // SECTION: Retrieve Equation
-    configure(data: { name: string; symbol: string; value: number; unit: string }[]) {
+    configure(data: ThermoRecord[]) {
         // NOTE: initialize the equation with the provided data
         this.params = this.setParams(data);
         this.extractRanges(data);
