@@ -6,6 +6,7 @@
 import { createEq, buildEquation, Equation, buildComponentEquation } from "../src/docs/equation";
 import type { Eq, ConfigParamMap, ConfigArgMap, ConfigRetMap, RawThermoRecord } from "../src/types";
 import type { Component } from "mozithermodb-settings";
+import { assertRawThermoRecordMatchesComponent } from "../src/utils";
 
 type P = "A" | "B" | "C" | "D" | "E";
 type A = "T";
@@ -53,13 +54,20 @@ const component = {
   state: 'g'
 } as Component;
 
+// fake component id for this example (matches the data records for the component)
+const componentFake = {
+  name: "Octane",
+  formula: "CH4",
+  state: 'g'
+} as Component;
+
 const componentId = "Methane-CH4";
 
 // NOTE: database records for the equation (e.g. from attached data)
 const data: RawThermoRecord[] = [
-  { name: "Name", symbol: "Methane", value: "N/A", unit: "N/A" },
-  { name: "Formula", symbol: "CH4", value: "N/A", unit: "N/A" },
-  { name: "State", symbol: "g", value: "N/A", unit: "N/A" },
+  { name: "Name", symbol: "Name", value: "Methane", unit: "" },
+  { name: "Formula", symbol: "Formula", value: "CH4", unit: "" },
+  { name: "State", symbol: "State", value: "g", unit: "" },
   { name: "A Constant", symbol: "A", value: 33298, unit: "J/kmol*K" },
   { name: "B Constant", symbol: "B", value: 79933, unit: "J/kmol*K" },
   { name: "C Constant", symbol: "C", value: 2086.9, unit: "K" },
@@ -68,6 +76,9 @@ const data: RawThermoRecord[] = [
   { name: "Tmin", symbol: "Tmin", value: 298.15, unit: "K" },
   { name: "Tmax", symbol: "Tmax", value: 1300, unit: "K" }
 ];
+
+// Optional explicit guard: validate that raw data belongs to the selected component
+assertRawThermoRecordMatchesComponent(component, data, "Name-Formula");
 
 // Initialize with coefficient values (from attached data)
 const Cp_eq_source: Equation = buildEquation(
@@ -104,7 +115,9 @@ const componentEq = buildComponentEquation(
   component,
   methaneCp,
   data,
-  ["Name-Formula", "Formula-State", "Name-State"] // component keys to generate multiple ids
+  ["Name-Formula", "Formula-State", "Name-State"], // component keys to generate multiple ids
+  true, // enable component/data match guard
+  "Name-Formula"
 );
 
 console.log(componentEq);

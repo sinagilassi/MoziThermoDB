@@ -7,6 +7,7 @@ import {
 // ! LOCALS
 import { RawThermoRecord, ThermoRecordMap } from '@/types';
 import { MoziData } from '@/core';
+import { assertRawThermoRecordMatchesComponent } from '@/utils';
 
 
 // NOTE: Type for the map returned by `configureData`, keyed by component ID
@@ -47,6 +48,12 @@ export const buildData = (
  * Notes
  * - `componentKey` controls which component-id variants are generated
  * - Each generated component id points to the same cleaned `ThermoRecordMap` for that component
+ * - Optional guard can verify the provided `data` belongs to the provided `component`
+ *   by comparing a component id built from raw data rows (e.g. `"Name-Formula"`)
+ *
+ * Guard args
+ * - `enableDataComponentMatchCheck`: enables component/data validation before building
+ * - `dataComponentMatchKey`: key format used for validation (e.g. `"Name-Formula"`)
  *
  * Returns
  * - `ComponentData` map: `{ [componentId]: ThermoRecordMap }`
@@ -54,8 +61,14 @@ export const buildData = (
 export const buildComponentData = (
     component: Component,
     data: RawThermoRecord[],
-    componentKey: ComponentKey[] = ["Name-Formula", "Formula-State", "Name-State"]
+    componentKey: ComponentKey[] = ["Name-Formula", "Formula-State", "Name-State"],
+    enableDataComponentMatchCheck: boolean = false,
+    dataComponentMatchKey: ComponentKey = "Name-Formula"
 ): ComponentData => {
+    if (enableDataComponentMatchCheck) {
+        assertRawThermoRecordMatchesComponent(component, data, dataComponentMatchKey);
+    }
+
     // NOTE: resolve component ids
     const componentIds = componentKey.map(key => set_component_id(component, key));
 

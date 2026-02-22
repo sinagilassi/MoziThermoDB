@@ -2,11 +2,11 @@
 import {
     Component,
     ComponentKey,
-    set_component_id,
-    create_component_id
+    set_component_id
 } from 'mozithermodb-settings';
 // ! LOCALS
 import { MoziEquation } from "@/core";
+import { assertRawThermoRecordMatchesComponent } from "@/utils";
 import {
     ConfigParamMap,
     ConfigArgMap,
@@ -15,7 +15,6 @@ import {
     ArgMap,
     RetMap,
     Awaitable,
-    ThermoRecord,
     RawThermoRecord
 } from '@/types';
 
@@ -189,17 +188,30 @@ export const buildEquation = function (
  *
  * Notes
  * - Clones the provided `equation` template once per call
+ * - Accepts raw thermo records (`RawThermoRecord[]`) and cleans them via `MoziEquation.addData`
  * - The same configured clone is attached to each generated component id alias
  *   for the same component (e.g. "Name-Formula", "Formula-State", "Name-State")
  * - Does not mutate the original template equation
+ * - Optional guard can verify the provided `data` belongs to the provided `component`
+ *   by comparing a component id built from raw data rows (e.g. `"Name-Formula"`)
+ *
+ * Guard args
+ * - `enableDataComponentMatchCheck`: enables component/data validation before configure
+ * - `dataComponentMatchKey`: key format used for validation (e.g. `"Name-Formula"`)
  */
 export const buildComponentEquation = function (
     component: Component,
     equation: MoziEquation,
-    data: ThermoRecord[],
-    componentKey: ComponentKey[] = ["Name-Formula", "Formula-State", "Name-State"]
+    data: RawThermoRecord[],
+    componentKey: ComponentKey[] = ["Name-Formula", "Formula-State", "Name-State"],
+    enableDataComponentMatchCheck: boolean = false,
+    dataComponentMatchKey: ComponentKey = "Name-Formula"
 ): Record<string, ComponentEquation> {
     const configuredEquation = equation.clone();
+
+    if (enableDataComponentMatchCheck) {
+        assertRawThermoRecordMatchesComponent(component, data, dataComponentMatchKey);
+    }
 
     // NOTE: resolve component id
     const componentIds = componentKey.map(key => set_component_id(component, key));
