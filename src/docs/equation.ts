@@ -10,7 +10,9 @@ import {
     ConfigParamMap,
     ConfigArgMap,
     ConfigRetMap,
-    Eq
+    Eq,
+    ArgMap,
+    RetMap
 } from '@/types';
 
 // NOTE: Type for the map returned by `configureEquation`, keyed by component ID
@@ -18,7 +20,7 @@ export type ComponentMoziEquation = { [key: string]: MoziEquation };
 
 
 /**
- * Create a typed equation definition that can be initialized with parameters
+ * SECTION: Create a typed equation definition that can be initialized with parameters
  * and later evaluated with arguments.
  *
  * Purpose
@@ -95,7 +97,7 @@ export const createEquation = function (
 }
 
 /**
- * Configure an equation instance with component-specific parameter data and
+ * SECTION: Configure an equation instance with component-specific parameter data and
  * return a map keyed by the resolved component id.
  *
  * Purpose
@@ -141,4 +143,68 @@ export const configureEquation = function (
 
     // NOTE: return the configured equation instance
     return res;
+}
+
+/**
+ * SECTION: Create, configure, and immediately evaluate an equation.
+ *
+ * Purpose
+ * - One-shot helper when you don't need to keep the equation instance
+ * - Useful for quick calculations in scripts or tests
+ *
+ * Notes
+ * - `data` must include all parameters required by `configParams`
+ * - `args` must include all arguments required by `configArgs`
+ *
+ * Returns
+ * - The evaluated result as a `RetMap`
+ *
+ * Example
+ * ```ts
+ * const result = launchEquation(
+ *   "Ideal Gas Z",
+ *   "Computes compressibility factor Z",
+ *   params,
+ *   args,
+ *   ret,
+ *   eq,
+ *   [
+ *     { name: "Temperature", symbol: "T", value: 298.15, unit: "K" },
+ *     { name: "Pressure", symbol: "P", value: 101325, unit: "Pa" }
+ *   ],
+ *   {
+ *     n: { value: 1, unit: "mol", symbol: "n" },
+ *     V: { value: 0.024465, unit: "m^3", symbol: "V" }
+ *   }
+ * );
+ * ```
+ */
+export const launchEquation = function (
+    name: string,
+    description: string,
+    configParams: ConfigParamMap,
+    configArgs: ConfigArgMap,
+    configRet: ConfigRetMap,
+    equation: Eq,
+    data: { name: string; symbol: string; value: number; unit: string }[],
+    args: ArgMap
+): RetMap {
+    // NOTE: create the equation instance
+    const eq: MoziEquation = createEquation(
+        name,
+        description,
+        configParams,
+        configArgs,
+        configRet,
+        equation
+    );
+
+    // NOTE: configure the equation with the provided data
+    eq.configure(data);
+
+    // NOTE: directly evaluate the equation with the provided arguments
+    const result = eq.calc(args);
+
+    // NOTE: return the result
+    return result;
 }

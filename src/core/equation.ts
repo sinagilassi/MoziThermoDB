@@ -107,7 +107,7 @@ export class MoziEquation {
 
     // SECTION: Evaluation Equation
     @timeIt({ label: 'MoziEquation.calc', enabledKey: 'enableTiming' })
-    private calc(args: ArgMap) {
+    public calc(args: ArgMap) {
         // NOTE: parameter setup
         const params = this.params;
 
