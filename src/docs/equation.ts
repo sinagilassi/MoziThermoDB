@@ -2,7 +2,8 @@
 import {
     Component,
     ComponentKey,
-    set_component_id
+    set_component_id,
+    create_component_id
 } from 'mozithermodb-settings';
 // ! LOCALS
 import { MoziEquation } from "@/core";
@@ -22,6 +23,12 @@ export type Equation = {
     equation: MoziEquation;
     symbol: string;
     unit: string;
+};
+
+export type ComponentEquation = {
+    [key: string]: {
+        [key: string]: MoziEquation;
+    };
 };
 
 // NOTE: Create, configure, and launch an equation in one step
@@ -167,6 +174,33 @@ export const buildEquation = function (
         unit: equation.returnUnit
     };
 }
+
+export const buildComponentEquation = function (
+    component: Component,
+    equation: MoziEquation,
+    data: ThermoRecord[],
+    componentKey: ComponentKey[] = ["Name-Formula", "Formula-State", "Name-State"]
+): ComponentEquation {
+    // NOTE: resolve component id
+    const componentIds = componentKey.map(key => set_component_id(component, key));
+
+    // NOTE: configure the equation with the provided data
+    equation.configure(data);
+
+    // NOTE: equation symbol
+    const equationSymbol = equation.equationSymbol;
+
+    // NOTE: return the configured equation (keyed by component id for lookup)
+    const componentEquation: ComponentEquation = {};
+    componentIds.forEach(id => {
+        componentEquation[id] = {
+            [equationSymbol]: equation
+        };
+    });
+
+    return componentEquation;
+}
+
 
 /**
  * Create, configure, and immediately evaluate an equation.

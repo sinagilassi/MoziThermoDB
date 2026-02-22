@@ -3,8 +3,8 @@
 // Y = A + B*(C/T / sinh(C/T))^2 + D*(E/T / cosh(E/T))^2
 // Units: J/(kmol*K)
 
-import { createEq, buildEquation, Equation } from "../src/docs/equation";
-import type { Eq, ConfigParamMap, ConfigArgMap, ConfigRetMap } from "../src/types";
+import { createEq, buildEquation, Equation, buildComponentEquation } from "../src/docs/equation";
+import type { Eq, ConfigParamMap, ConfigArgMap, ConfigRetMap, ThermoRecord } from "../src/types";
 import type { Component } from "mozithermodb-settings";
 
 type P = "A" | "B" | "C" | "D" | "E";
@@ -24,7 +24,7 @@ const args: ConfigArgMap<A> = {
 };
 
 const ret: ConfigRetMap<R> = {
-  Cp_IG: { name: "Heat Capacity (ideal gas)", symbol: "Cp", unit: "J/kmol*K" }
+  Cp_IG: { name: "Heat Capacity (ideal gas)", symbol: "Cp_IG", unit: "J/kmol*K" }
 };
 
 const eq: Eq<P, A> = (p, a) => {
@@ -55,9 +55,8 @@ const component = {
 
 const componentId = "Methane-CH4";
 
-// Initialize with coefficient values (from attached data)
-const Cp_eq_source: Equation = buildEquation(
-  methaneCp, [
+// NOTE: database records for the equation (e.g. from attached data)
+const data: ThermoRecord[] = [
   { name: "A Constant", symbol: "A", value: 33298, unit: "J/kmol*K" },
   { name: "B Constant", symbol: "B", value: 79933, unit: "J/kmol*K" },
   { name: "C Constant", symbol: "C", value: 2086.9, unit: "K" },
@@ -65,7 +64,12 @@ const Cp_eq_source: Equation = buildEquation(
   { name: "E", symbol: "E", value: 991.96, unit: "K" },
   { name: "Tmin", symbol: "Tmin", value: 298.15, unit: "K" },
   { name: "Tmax", symbol: "Tmax", value: 1300, unit: "K" }
-],
+];
+
+// Initialize with coefficient values (from attached data)
+const Cp_eq_source: Equation = buildEquation(
+  methaneCp,
+  data,
 );
 console.log(Cp_eq_source);
 
@@ -91,3 +95,21 @@ try {
 } catch (err) {
   console.log("Error (as expected for out-of-range):", err instanceof Error ? err.message : String(err));
 }
+
+// SECTION: Build Component Equation (maps to component id)
+const componentEq = buildComponentEquation(
+  component,
+  methaneCp,
+  data,
+  ["Name-Formula", "Formula-State", "Name-State"] // component keys to generate multiple ids
+);
+
+console.log(componentEq);
+
+// NOTE: execute
+const eq1 = componentEq["Methane-CH4"]["Cp_IG"];
+const result = eq1.calc({
+  T: { value: 298.15, unit: "K", symbol: "T" }
+});
+
+console.log(result);
