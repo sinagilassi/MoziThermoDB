@@ -41,12 +41,12 @@ const eq: Eq<P, A, R> = async (p, a) => {
 };
 
 const methaneCp = createEq(
-  "Methane Ideal Gas Cp",
-  "Ideal gas heat capacity for methane",
   params,
   args,
   ret,
-  eq
+  eq,
+  "Methane Ideal Gas Cp",
+  "Ideal gas heat capacity for methane",
 );
 
 const component = {

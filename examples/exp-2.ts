@@ -37,12 +37,12 @@ const eq: Eq<P, A, R> = (p, a) => {
 };
 
 const vaporPressure = createEq(
-    "Liquid Vapor Pressure (DIPPR 101)",
-    "DIPPR Eq. 101 using K and Pa",
     params,
     args,
     ret,
-    eq
+    eq,
+    "Liquid Vapor Pressure (DIPPR 101)",
+    "DIPPR Eq. 101 using K and Pa",
 );
 
 const component = {

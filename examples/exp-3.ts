@@ -41,8 +41,6 @@ const eq: Eq<P, A, R> = (p, a) => {
 };
 
 const result = launchEq(
-    "Methane Ideal Gas Cp",
-    "Ideal gas heat capacity for methane",
     params,
     args,
     ret,
@@ -56,7 +54,9 @@ const result = launchEq(
     ],
     {
         T: { value: 298.15, unit: "K", symbol: "T" }
-    }
+    },
+    "Methane Ideal Gas Cp",
+    "Ideal gas heat capacity for methane",
 );
 
 console.log(result);
