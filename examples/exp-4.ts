@@ -1,7 +1,7 @@
 // Example: build component data map using MoziData helpers
 
-import { buildComponentData } from "../src/docs/data";
-import type { ThermoRecord } from "../src/types";
+import { buildComponentData, buildData } from "../src/docs/data";
+import type { RawThermoRecord } from "../src/types";
 import type { Component } from "mozithermodb-settings";
 
 const component = {
@@ -11,7 +11,10 @@ const component = {
 } as Component;
 
 
-const records: ThermoRecord[] = [
+const records: RawThermoRecord[] = [
+    { name: "Name", symbol: "Methane", value: "N/A", unit: "N/A" },
+    { name: "Formula", symbol: "CH4", value: "N/A", unit: "N/A" },
+    { name: "State", symbol: "g", value: "N/A", unit: "N/A" },
     { name: "Molecular Weight", symbol: "MW", value: 16.04, unit: "g/mol" },
     { name: "Critical Temperature", symbol: "Tc", value: 190.56, unit: "K" },
     { name: "Critical Pressure", symbol: "Pc", value: 4.5992, unit: "MPa" },
@@ -22,12 +25,15 @@ const records: ThermoRecord[] = [
     { name: "Gibbs Energy of Formation", symbol: "GiEnFo", value: -50.8, unit: "kJ/mol" }
 ];
 
+// SECTION: Build data
+const buildDataRes = buildData(records, "Methane Thermo Data", "Thermodynamic properties of methane");
+console.log(buildDataRes);
+
+
+// SECTION: Build component data map using the helper function
 const dataMap = buildComponentData(
-    records,
     component,
-    "Name-Formula",
-    "Methane Thermo Data",
-    "Ideal-gas Cp coefficients with temperature range"
+    records,
 );
 
 console.log(dataMap);

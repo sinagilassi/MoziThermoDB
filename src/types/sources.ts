@@ -8,6 +8,8 @@ import { ArgMap, RetMap, ConfigArgMap, ConfigRetMap } from "./equations";
 // NOTE Data Source
 // ! key: component id (e.g. "Methane-CH4")
 // ! value: map of data records for that component, keyed by record symbol (e.g. "A", "B", etc.)
+// ! This is the cleaned numeric data shape (`ThermoRecordMap`) produced by `buildData`/`buildComponentData`,
+// ! not raw DB records with mixed string/number values.
 export type DataSource = ComponentData;
 
 // NOTE: Equation Source

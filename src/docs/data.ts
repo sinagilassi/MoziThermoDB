@@ -5,7 +5,7 @@ import {
     set_component_id
 } from 'mozithermodb-settings';
 // ! LOCALS
-import { ThermoRecord, ThermoRecordMap } from '@/types';
+import { RawThermoRecord, ThermoRecordMap } from '@/types';
 import { MoziData } from '@/core';
 
 
@@ -13,9 +13,20 @@ import { MoziData } from '@/core';
 export type ComponentData = { [key: string]: ThermoRecordMap };
 
 
-
+/**
+ * Build a cleaned thermo-data map from raw thermo records.
+ *
+ * Purpose
+ * - Accept raw DB records with mixed `string | number` values
+ * - Remove non-numeric metadata rows during cleaning (e.g. `Name`, `Formula`, `State`)
+ * - Return a symbol-keyed `ThermoRecordMap` containing numeric values only
+ *
+ * Notes
+ * - Uses `MoziData`, which stores both raw records and cleaned numeric records internally
+ * - Returned map is suitable for equation/data-source usage
+ */
 export const buildData = (
-    data: ThermoRecord[],
+    data: RawThermoRecord[],
     name?: string,
     description?: string,
 ) => {
@@ -26,9 +37,23 @@ export const buildData = (
     return moziData.getDataAsMap()
 }
 
+/**
+ * Build a component-keyed thermo-data source from raw thermo records.
+ *
+ * Purpose
+ * - Clean raw component records to numeric thermo records
+ * - Expose the same cleaned symbol-keyed data under one or more component-id aliases
+ *
+ * Notes
+ * - `componentKey` controls which component-id variants are generated
+ * - Each generated component id points to the same cleaned `ThermoRecordMap` for that component
+ *
+ * Returns
+ * - `ComponentData` map: `{ [componentId]: ThermoRecordMap }`
+ */
 export const buildComponentData = (
     component: Component,
-    data: ThermoRecord[],
+    data: RawThermoRecord[],
     componentKey: ComponentKey[] = ["Name-Formula", "Formula-State", "Name-State"]
 ): ComponentData => {
     // NOTE: resolve component ids

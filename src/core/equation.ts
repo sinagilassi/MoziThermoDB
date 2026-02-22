@@ -8,15 +8,20 @@ import {
     ParamMap,
     ArgMap,
     RetMap,
-    ThermoRecord
+    ThermoRecord,
+    RawThermoRecord
 } from '@/types';
-import { timeIt } from '@/utils';
+import { timeIt, cleanRawThermoRecord } from '@/utils';
 
 
 export class MoziEquation {
     // SECTION: Attributes
     name: string = 'Thermo Equation';
     description: string = 'A thermodynamic equation with configurable parameters and arguments';
+
+    // SECTION: thermo data
+    rawThermoRecord: RawThermoRecord[] = [];
+    thermoRecord: ThermoRecord[] = [];
 
     // NOTE: scaling options for parameters (e.g., if input data is in different units than expected)
     scaleOperation: 'multiply' | 'divide' = 'multiply';
@@ -96,6 +101,37 @@ export class MoziEquation {
         return Object.values(this.configRet).map(ret => ret.symbol);
     }
 
+    // NOTE: create a reusable copy of the equation definition (template clone; no configured data/params)
+    clone(): MoziEquation {
+        const cloned = new MoziEquation(
+            this.equationSymbol,
+            this.configParams,
+            this.configArgs,
+            this.configRet,
+            this.equation,
+            this.name,
+            this.description
+        );
+
+        cloned.scaleOperation = this.scaleOperation;
+        cloned.enableTiming = this.enableTiming;
+        cloned.enableRangeCheck = this.enableRangeCheck;
+
+        return cloned;
+    }
+
+    set addData(records: RawThermoRecord[]) {
+        // reset
+        this.rawThermoRecord = [];
+        this.thermoRecord = [];
+
+        // add new records
+        this.rawThermoRecord.push(...records);
+
+        // clean and store as thermoRecord
+        this.thermoRecord = cleanRawThermoRecord(this.rawThermoRecord);
+    }
+
     // SECTION: Set Equation Parameters
     private setParams(
         data: ThermoRecord[],
@@ -110,18 +146,20 @@ export class MoziEquation {
                 throw new Error(`Missing data for parameter: ${value.name} (${value.symbol})`);
             }
 
+            let paramValue = dataItem.value;
+
             // NOTE: apply scaling if specified
             if (value.scale) {
                 if (this.scaleOperation === 'multiply') {
-                    dataItem.value *= value.scale;
+                    paramValue *= value.scale;
                 } else if (this.scaleOperation === 'divide') {
-                    dataItem.value /= value.scale;
+                    paramValue /= value.scale;
                 }
             }
 
             // NOTE: store the parameter with its value, unit, symbol, and scale
             params[key] = {
-                value: dataItem.value,
+                value: paramValue,
                 unit: value.unit,
                 symbol: value.symbol,
                 scale: value.scale
@@ -240,10 +278,15 @@ export class MoziEquation {
     }
 
     // SECTION: Retrieve Equation
-    configure(data: ThermoRecord[]) {
+    configure() {
+        // NOTE: check thermo record
+        if (this.rawThermoRecord.length === 0) {
+            throw new Error('No thermo data provided. Please add data using the addData setter before configuring the equation.');
+        }
+
         // NOTE: initialize the equation with the provided data
-        this.params = this.setParams(data);
-        this.extractRanges(data);
+        this.params = this.setParams(this.thermoRecord);
+        this.extractRanges(this.thermoRecord);
 
         // NOTE: return an object with the equation's name, description, and a function to evaluate it
         return {

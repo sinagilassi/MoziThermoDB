@@ -15,7 +15,8 @@ import {
     ArgMap,
     RetMap,
     Awaitable,
-    ThermoRecord
+    ThermoRecord,
+    RawThermoRecord
 } from '@/types';
 
 // NOTE: Type for the map returned by `configureEquation`, keyed by component ID
@@ -45,17 +46,18 @@ export interface LaunchEquationAsync {
 }
 
 /**
- * Create a typed equation definition that can be initialized with parameters
- * and later evaluated with arguments.
+ * Create a reusable equation definition (template) that can be configured
+ * later with component-specific thermo data and evaluated with arguments.
  *
  * Purpose
  * - Define a function with explicit params, args, and return shapes
- * - Initialize it once with parameter values
- * - Evaluate it later by calling `calc(args)`
+ * - Reuse the same equation definition across components
+ * - Configure cloned instances later with parameter values
+ * - Evaluate configured instances by calling `calc(args)`
  *
  * How to use (minimal example)
  * ```ts
- * import { createEquation } from "@/docs/equation";
+ * import { createEq, buildEquation } from "@/docs/equation";
  * import type { Eq, ConfigParamMap, ConfigArgMap, ConfigRetMap } from "@/types";
  *
  * // 1) Define parameter, argument, and return metadata
@@ -74,27 +76,27 @@ export interface LaunchEquationAsync {
  * };
  *
  * // 2) Implement the equation function
- * const eq: Eq<"T" | "P", "n" | "V", "Z"> = (params, args) => {
+ * const eq: Eq<"T" | "P", "n" | "V"> = (params, args) => {
  *   const R = 8.314; // J/(mol*K)
  *   const Z = (params.P.value * args.V.value) / (args.n.value * R * params.T.value);
  *   return { value: Z, unit: "-", symbol: "Z" };
  * };
  *
  * // 3) Create the equation object
- * const equation = createEquation(
- *   "Ideal Gas Z",
- *   "Computes compressibility factor Z",
+ * const equation = createEq(
  *   params,
  *   args,
  *   ret,
- *   eq
+ *   eq,
+ *   "Ideal Gas Z",
+ *   "Computes compressibility factor Z"
  * );
  *
- * // 4) Initialize with parameter values (once)
- * const instance = equation.retrieve([
- *   { name: "Temperature", value: 298.15, unit: "K" },
- *   { name: "Pressure", value: 101325, unit: "Pa" }
- * ]);
+ * // 4) Build a configured instance from raw component data (clone + configure)
+ * const instance = buildEquation(equation, [
+ *   { name: "Temperature", symbol: "T", value: 298.15, unit: "K" },
+ *   { name: "Pressure", symbol: "P", value: 101325, unit: "Pa" }
+ * ]).equation;
  *
  * // 5) Evaluate later with arguments
  * const result = instance.calc({
@@ -131,70 +133,90 @@ export const createEq = function (
 }
 
 /**
- * Configure an equation instance with component-specific parameter data and
- * return a map keyed by the resolved component id.
+ * Build an independently configured equation instance from a reusable equation
+ * template and raw thermo data.
  *
  * Purpose
- * - Attach the equation to a component id (for logging and lookup)
- * - Initialize the equation with parameter values (via `equation.configure`)
+ * - Clone the provided `equation` template
+ * - Clean raw thermo records and initialize parameter values
+ * - Return a configured equation instance without mutating the original template
  *
  * Notes
  * - `data` must include all parameters required by `equation.configParameters`
- * - `componentKey` controls the component id format (default: `"Name-Formula"`)
- *
  * Returns
- * - An object shaped as `{ [component_id]: MoziEquation }`
+ * - An object with the configured equation plus symbol/unit metadata
  *
  * Example
  * ```ts
- * const configured = configureEquation(component, equation, [
- *   { name: "A", value: 33298, unit: "J/kmol*K" },
- *   { name: "B", value: 79933, unit: "J/kmol*K" },
- *   { name: "C", value: 2086.9, unit: "K" },
- *   { name: "D", value: 41602, unit: "J/kmol*K" },
- *   { name: "E", value: 991.96, unit: "K" }
+ * const configured = buildEquation(equationTemplate, [
+ *   { name: "Name", symbol: "Name", value: "Methane", unit: "" },
+ *   { name: "Formula", symbol: "Formula", value: "CH4", unit: "" },
+ *   { name: "State", symbol: "State", value: "g", unit: "" },
+ *   { name: "A Constant", symbol: "A", value: 33298, unit: "J/kmol*K" },
+ *   { name: "B Constant", symbol: "B", value: 79933, unit: "J/kmol*K" },
+ *   { name: "C Constant", symbol: "C", value: 2086.9, unit: "K" },
+ *   { name: "D Constant", symbol: "D", value: 41602, unit: "J/kmol*K" },
+ *   { name: "E", symbol: "E", value: 991.96, unit: "K" }
  * ]);
- * // configured["Methane-Formula"] -> MoziEquation
+ * // configured.equation -> independently configured MoziEquation instance
  * ```
  */
 export const buildEquation = function (
     equation: MoziEquation,
-    data: ThermoRecord[],
+    data: RawThermoRecord[],
 ): Equation {
+    const configuredEquation = equation.clone();
+
+    // NOTE: add data to the equation instance
+    configuredEquation.addData = data;
+
     // NOTE: configure the equation with the provided data
-    equation.configure(data);
+    configuredEquation.configure();
 
     // NOTE: equation symbol
-    const equationSymbol = equation.equationSymbol;
+    const equationSymbol = configuredEquation.equationSymbol;
 
     // NOTE: return the configured equation (keyed by symbol for lookup)
     return {
-        equation: equation,
+        equation: configuredEquation,
         symbol: equationSymbol,
-        unit: equation.returnUnit
+        unit: configuredEquation.returnUnit
     };
 }
 
+/**
+ * Build a component-keyed equation map using a cloned/configured equation instance.
+ *
+ * Notes
+ * - Clones the provided `equation` template once per call
+ * - The same configured clone is attached to each generated component id alias
+ *   for the same component (e.g. "Name-Formula", "Formula-State", "Name-State")
+ * - Does not mutate the original template equation
+ */
 export const buildComponentEquation = function (
     component: Component,
     equation: MoziEquation,
     data: ThermoRecord[],
     componentKey: ComponentKey[] = ["Name-Formula", "Formula-State", "Name-State"]
 ): Record<string, ComponentEquation> {
+    const configuredEquation = equation.clone();
+
     // NOTE: resolve component id
     const componentIds = componentKey.map(key => set_component_id(component, key));
 
+    // NOTE: add data to the equation instance
+    configuredEquation.addData = data;
     // NOTE: configure the equation with the provided data
-    equation.configure(data);
+    configuredEquation.configure();
 
     // NOTE: equation symbol
-    const equationSymbol = equation.equationSymbol;
+    const equationSymbol = configuredEquation.equationSymbol;
 
     // NOTE: return the configured equation (keyed by component id for lookup)
     const componentEquation: Record<string, ComponentEquation> = {};
     componentIds.forEach(id => {
         componentEquation[id] = {
-            [equationSymbol]: equation
+            [equationSymbol]: configuredEquation
         };
     });
 
@@ -207,11 +229,12 @@ export const buildComponentEquation = function (
  * Create, configure, and immediately evaluate an equation.
  *
  * Purpose
- * - One-shot helper when you don't need to keep the equation instance
+ * - One-shot helper when you don't need to keep a configured instance
  * - Useful for quick calculations in scripts or tests
  *
  * Notes
- * - `data` must include all parameters required by `configParams`
+ * - `data` can include raw/string fields such as `"Name"` / `"Formula"` / `"State"`
+ * - Numeric parameter/range fields are cleaned from raw thermo records before configuration
  * - `args` must include all arguments required by `configArgs`
  *
  * Returns
@@ -219,9 +242,7 @@ export const buildComponentEquation = function (
  *
  * Example
  * ```ts
- * const result = launchEquation(
- *   "Ideal Gas Z",
- *   "Computes compressibility factor Z",
+ * const result = launchEq(
  *   params,
  *   args,
  *   ret,
@@ -242,7 +263,7 @@ export const launchEq = function (
     configArgs: ConfigArgMap,
     configRet: ConfigRetMap,
     equation: Eq,
-    data: ThermoRecord[],
+    data: RawThermoRecord[],
     args: ArgMap,
     name?: string,
     description?: string,
@@ -256,9 +277,10 @@ export const launchEq = function (
         name,
         description
     );
-
+    // NOTE: add data to the equation instance
+    eq.addData = data;
     // NOTE: configure the equation with the provided data
-    eq.configure(data);
+    eq.configure();
 
     // NOTE: directly evaluate the equation with the provided arguments
     const result = eq.calc(args);
@@ -279,7 +301,8 @@ export const launchEq = function (
  * - Useful when the equation needs async work (e.g., remote data)
  *
  * Notes
- * - `data` must include all parameters required by `configParams`
+ * - `data` can include raw/string fields such as `"Name"` / `"Formula"` / `"State"`
+ * - Numeric parameter/range fields are cleaned from raw thermo records before configuration
  * - `args` must include all arguments required by `configArgs`
  *
  * Returns
@@ -288,8 +311,6 @@ export const launchEq = function (
  * Example
  * ```ts
  * const { result } = await launchEqAsync(
- *   "Ideal Gas Z",
- *   "Computes compressibility factor Z",
  *   params,
  *   args,
  *   ret,
@@ -301,7 +322,9 @@ export const launchEq = function (
  *   {
  *     n: { value: 1, unit: "mol", symbol: "n" },
  *     V: { value: 0.024465, unit: "m^3", symbol: "V" }
- *   }
+ *   },
+ *   "Ideal Gas Z",
+ *   "Computes compressibility factor Z"
  * );
  * ```
  */
@@ -310,7 +333,7 @@ export const launchEqAsync = function (
     configArgs: ConfigArgMap,
     configRet: ConfigRetMap,
     equation: Eq,
-    data: ThermoRecord[],
+    data: RawThermoRecord[],
     args: ArgMap,
     name?: string,
     description?: string,
@@ -326,8 +349,10 @@ export const launchEqAsync = function (
             description
         );
 
+        // NOTE: add data to the equation instance
+        eq.addData = data;
         // NOTE: configure the equation with the provided data
-        eq.configure(data);
+        eq.configure();
 
         // NOTE: directly evaluate the equation with the provided arguments
         const result = await eq.calcAsync(args);

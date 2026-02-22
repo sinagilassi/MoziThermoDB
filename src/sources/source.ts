@@ -30,7 +30,7 @@ export class Source {
 
     constructor(
         modelSource?: ModelSource,
-        componentKey: ComponentKey = "Name-State",
+        componentKey: ComponentKey = "Name-Formula",
     ) {
         this.modelSource = modelSource;
         this.componentKey = componentKey;

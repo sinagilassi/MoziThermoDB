@@ -1,6 +1,7 @@
 // import libs
 // ! LOCALS
-import { ThermoRecord, ThermoRecordMap } from '@/types';
+import { RawThermoRecord, ThermoRecord, ThermoRecordMap } from '@/types';
+import { cleanRawThermoRecord } from '@/utils';
 
 
 
@@ -9,23 +10,42 @@ export class MoziData {
     name: string = 'Thermo Data';
     description: string = 'A collection of thermodynamic data records';
 
+    // SECTION: thermo data
+    rawThermoRecord: RawThermoRecord[] = [];
+    data: ThermoRecord[] = [];
+
     // NOTE: created at
     createdAt: Date = new Date();
 
     // NOTE: constructor
     constructor(
-        public data: ThermoRecord[],
+        data: RawThermoRecord[],
         name?: string,
         description?: string
     ) {
         // set name and description if provided
         if (name) this.name = name;
         if (description) this.description = description;
+
+        this.addData = data;
+    }
+
+    set addData(records: RawThermoRecord[]) {
+        this.rawThermoRecord = [];
+        this.data = [];
+
+        this.rawThermoRecord.push(...records);
+        this.data = cleanRawThermoRecord(this.rawThermoRecord);
     }
 
     // NOTE: Retrieve Data
     getData() {
         return this.data;
+    }
+
+    // NOTE: Retrieve original raw thermo records (mixed string/number values)
+    getRawData() {
+        return this.rawThermoRecord;
     }
 
     // NOTE: Retrieve Data by Symbol
@@ -79,12 +99,14 @@ export class MoziData {
 
     // SECTION: Utility Methods
     // NOTE: Add a new record to the data
-    addRecord(record: ThermoRecord) {
-        this.data.push(record);
+    addRecord(record: RawThermoRecord) {
+        this.rawThermoRecord.push(record);
+        this.data = cleanRawThermoRecord(this.rawThermoRecord);
     }
 
     // NOTE: Remove a record by symbol
     removeRecordBySymbol(symbol: string) {
+        this.rawThermoRecord = this.rawThermoRecord.filter(record => record.symbol !== symbol);
         this.data = this.data.filter(record => record.symbol !== symbol);
     }
 
@@ -95,6 +117,14 @@ export class MoziData {
             throw new Error(`Symbol ${symbol} not found in data`);
         }
 
+        const rawRecord = this.rawThermoRecord.find(record => record.symbol === symbol);
+        if (rawRecord) {
+            rawRecord.value = newValue;
+            if (newUnit) {
+                rawRecord.unit = newUnit;
+            }
+        }
+
         record_.value = newValue;
         if (newUnit) {
             record_.unit = newUnit;
@@ -103,11 +133,13 @@ export class MoziData {
 
     // NOTE: Clear all data records
     clearData() {
+        this.rawThermoRecord = [];
         this.data = [];
     }
 
-    // NOTE: Add new records from an array of ThermoRecords
-    addRecords(records: ThermoRecord[]) {
-        this.data.push(...records);
+    // NOTE: Add new records from an array of RawThermoRecords, then clean
+    addRecords(records: RawThermoRecord[]) {
+        this.rawThermoRecord.push(...records);
+        this.data = cleanRawThermoRecord(this.rawThermoRecord);
     }
 }

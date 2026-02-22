@@ -1,5 +1,8 @@
 // import libs
 
+// NOTE: Raw ThermoRecord
+export type RawThermoRecord = { name: string; symbol: string; value: number | string; unit: string }
+
 // NOTE: ThermoRecord taken from database
 export type ThermoRecord = { name: string; symbol: string; value: number; unit: string }
 

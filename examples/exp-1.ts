@@ -4,7 +4,7 @@
 // Units: J/(kmol*K)
 
 import { createEq, buildEquation, Equation, buildComponentEquation } from "../src/docs/equation";
-import type { Eq, ConfigParamMap, ConfigArgMap, ConfigRetMap, ThermoRecord } from "../src/types";
+import type { Eq, ConfigParamMap, ConfigArgMap, ConfigRetMap, RawThermoRecord } from "../src/types";
 import type { Component } from "mozithermodb-settings";
 
 type P = "A" | "B" | "C" | "D" | "E";
@@ -56,7 +56,10 @@ const component = {
 const componentId = "Methane-CH4";
 
 // NOTE: database records for the equation (e.g. from attached data)
-const data: ThermoRecord[] = [
+const data: RawThermoRecord[] = [
+  { name: "Name", symbol: "Methane", value: "N/A", unit: "N/A" },
+  { name: "Formula", symbol: "CH4", value: "N/A", unit: "N/A" },
+  { name: "State", symbol: "g", value: "N/A", unit: "N/A" },
   { name: "A Constant", symbol: "A", value: 33298, unit: "J/kmol*K" },
   { name: "B Constant", symbol: "B", value: 79933, unit: "J/kmol*K" },
   { name: "C Constant", symbol: "C", value: 2086.9, unit: "K" },
