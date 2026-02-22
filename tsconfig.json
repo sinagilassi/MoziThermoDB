@@ -15,6 +15,7 @@
         "types": [
             "node"
         ],
+        "experimentalDecorators": true,
         "skipLibCheck": true,
         "noImplicitOverride": true,
         "noFallthroughCasesInSwitch": true,

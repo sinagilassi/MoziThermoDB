@@ -24,17 +24,17 @@ export type SymbolicQuantity = Quantity & {
     symbol: string;
 };
 
-export type InputParam = SymbolicQuantity & {
+export type Param = SymbolicQuantity & {
     scale?: number;
 };
 
-export type InputArg = SymbolicQuantity;
+export type Arg = SymbolicQuantity;
 
 export type Ret = SymbolicQuantity;
 
 // Maps with strong key typing (optional)
-export type ParamMap<K extends string = string> = Record<K, InputParam>;
-export type ArgMap<K extends string = string> = Record<K, InputArg>;
+export type ParamMap<K extends string = string> = Record<K, Param>;
+export type ArgMap<K extends string = string> = Record<K, Arg>;
 export type RetMap<K extends string = string> = Record<K, Ret>;
 
 // NOTE: Function type for equations, with strong typing for parameter, argument, and return keys

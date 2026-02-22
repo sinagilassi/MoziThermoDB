@@ -8,12 +8,14 @@ import {
     ArgMap,
     RetMap
 } from '@/types';
+import { timeIt } from '@/utils';
 
 
 export class MoziEquation {
     // SECTION: Attributes
     scaleOperation: 'multiply' | 'divide' = 'multiply';
     params: ParamMap = {};
+    enableTiming = false;
 
     // NOTE: constructor
     constructor(
@@ -69,16 +71,16 @@ export class MoziEquation {
 
     // SECTION: Set Equation Parameters
     private setParams(
-        data: { name: string; value: number; unit: string }[],
+        data: { name: string; symbol: string; value: number; unit: string }[],
     ) {
         // NOTE: reset parameters
         const params: ParamMap = {};
 
         // NOTE: iterate through config parameters and match with input data
         for (const [key, value] of Object.entries(this.configParams)) {
-            const dataItem = data.find(item => item.name === value.name);
+            const dataItem = data.find(item => item.symbol === value.symbol);
             if (!dataItem) {
-                throw new Error(`Missing data for parameter: ${value.name}`);
+                throw new Error(`Missing data for parameter: ${value.name} (${value.symbol})`);
             }
 
             // NOTE: apply scaling if specified
@@ -104,16 +106,19 @@ export class MoziEquation {
     }
 
     // SECTION: Evaluation Equation
+    @timeIt({ label: 'MoziEquation.calc', enabledKey: 'enableTiming' })
     private calc(args: ArgMap) {
         // NOTE: parameter setup
         const params = this.params;
 
         // NOTE: argument setup
-        for (const [key, value] of Object.entries(this.configArgs)) {
-            const argValue = args[key];
+        // ! check symbol by symbol in configArgs and args to ensure correct mapping
+        const argsSymbols = Object.values(args).map(arg => arg.symbol);
 
-            if (!argValue) {
-                throw new Error(`Missing argument: ${value.name}`);
+        // iterate through config arguments and match with input args
+        for (const symbol of this.argumentSymbolList) {
+            if (!argsSymbols.includes(symbol)) {
+                throw new Error(`Missing argument for symbol: ${symbol}`);
             }
         }
 
@@ -125,7 +130,7 @@ export class MoziEquation {
     }
 
     // SECTION: Retrieve Equation
-    configure(data: { name: string; value: number; unit: string }[]) {
+    configure(data: { name: string; symbol: string; value: number; unit: string }[]) {
         // NOTE: initialize the equation with the provided data
         this.params = this.setParams(data);
 

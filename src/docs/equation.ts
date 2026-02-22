@@ -13,6 +13,7 @@ import {
     Eq
 } from '@/types';
 
+// NOTE: Type for the map returned by `configureEquation`, keyed by component ID
 export type ComponentMoziEquation = { [key: string]: MoziEquation };
 
 
@@ -123,7 +124,7 @@ export const createEquation = function (
 export const configureEquation = function (
     component: Component,
     equation: MoziEquation,
-    data: { name: string; value: number; unit: string }[],
+    data: { name: string; symbol: string; value: number; unit: string }[],
     componentKey: ComponentKey = "Name-Formula"
 ): ComponentMoziEquation {
     // NOTE: set component ID for logging
