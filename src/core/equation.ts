@@ -15,7 +15,12 @@ export class MoziEquation {
     // SECTION: Attributes
     scaleOperation: 'multiply' | 'divide' = 'multiply';
     params: ParamMap = {};
+
+    // NOTE: timing options
     enableTiming = false;
+    // NOTE: range check options
+    enableRangeCheck = true;
+    private argRanges: Record<string, { min?: number; max?: number; unit?: string }> = {};
 
     // NOTE: constructor
     constructor(
@@ -105,6 +110,46 @@ export class MoziEquation {
         return params;
     }
 
+    // SECTION: Extract Min/Max Ranges from data (e.g., Tmin/Tmax)
+    private extractRanges(
+        data: { name: string; symbol: string; value: number; unit: string }[],
+    ) {
+        const argSymbols = this.argumentSymbolList;
+
+        const argRanges: Record<string, { min?: number; max?: number; unit?: string }> = {};
+
+        for (const item of data) {
+            if (item.symbol.endsWith('min')) {
+                const base = item.symbol.slice(0, -3);
+                if (argSymbols.includes(base)) {
+                    argRanges[base] = { ...(argRanges[base] ?? {}), min: item.value, unit: item.unit };
+                }
+            }
+
+            if (item.symbol.endsWith('max')) {
+                const base = item.symbol.slice(0, -3);
+                if (argSymbols.includes(base)) {
+                    argRanges[base] = { ...(argRanges[base] ?? {}), max: item.value, unit: item.unit };
+                }
+            }
+        }
+
+        this.argRanges = argRanges;
+    }
+
+    // SECTION: Range Checks
+    private assertInRange(symbol: string, value: number, range?: { min?: number; max?: number; unit?: string }) {
+        if (!range) return;
+
+        if (range.min !== undefined && value < range.min) {
+            throw new Error(`Value for ${symbol} (${value}) is below min (${range.min})${range.unit ? ` ${range.unit}` : ''}`);
+        }
+
+        if (range.max !== undefined && value > range.max) {
+            throw new Error(`Value for ${symbol} (${value}) is above max (${range.max})${range.unit ? ` ${range.unit}` : ''}`);
+        }
+    }
+
     // SECTION: Evaluation Equation
     @timeIt({ label: 'MoziEquation.calc', enabledKey: 'enableTiming' })
     public calc(args: ArgMap): RetMap {
@@ -119,6 +164,14 @@ export class MoziEquation {
         for (const symbol of this.argumentSymbolList) {
             if (!argsSymbols.includes(symbol)) {
                 throw new Error(`Missing argument for symbol: ${symbol}`);
+            }
+        }
+
+        if (this.enableRangeCheck) {
+            // check argument ranges (if provided)
+            for (const [key, arg] of Object.entries(args)) {
+                const symbol = arg.symbol ?? key;
+                this.assertInRange(symbol, arg.value, this.argRanges[symbol]);
             }
         }
 
@@ -149,6 +202,14 @@ export class MoziEquation {
             }
         }
 
+        if (this.enableRangeCheck) {
+            // check argument ranges (if provided)
+            for (const [key, arg] of Object.entries(args)) {
+                const symbol = arg.symbol ?? key;
+                this.assertInRange(symbol, arg.value, this.argRanges[symbol]);
+            }
+        }
+
         // NOTE: evaluate the equation function with the current parameters and input arguments
         const result = await this.equation(params, args);
 
@@ -160,6 +221,7 @@ export class MoziEquation {
     configure(data: { name: string; symbol: string; value: number; unit: string }[]) {
         // NOTE: initialize the equation with the provided data
         this.params = this.setParams(data);
+        this.extractRanges(data);
 
         // NOTE: return an object with the equation's name, description, and a function to evaluate it
         return {

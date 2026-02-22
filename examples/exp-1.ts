@@ -65,7 +65,9 @@ const configured = configureEq(
   { name: "B Constant", symbol: "B", value: 79933, unit: "J/kmol*K" },
   { name: "C Constant", symbol: "C", value: 2086.9, unit: "K" },
   { name: "D Constant", symbol: "D", value: 41602, unit: "J/kmol*K" },
-  { name: "E", symbol: "E", value: 991.96, unit: "K" }
+  { name: "E", symbol: "E", value: 991.96, unit: "K" },
+  { name: "Tmin", symbol: "Tmin", value: 298.15, unit: "K" },
+  { name: "Tmax", symbol: "Tmax", value: 1300, unit: "K" }
 ],
   "Name-Formula"
 );
@@ -74,10 +76,21 @@ console.log(configured);
 const componentEq = configured[componentId];
 // disable timing for this example
 // componentEq.enableTiming = false;
+// enable range checks (uses Tmin/Tmax from data)
+componentEq.enableRangeCheck = true;
 
-// Evaluate with argument values
-const result = componentEq.calc({
+// Evaluate with argument values (in-range)
+const resultInRange = componentEq.calc({
   T: { value: 298.15, unit: "K", symbol: "T" }
 });
 
-console.log(result);
+console.log(resultInRange);
+
+// Example: out-of-range (will throw)
+try {
+  componentEq.calc({
+    T: { value: 200, unit: "K", symbol: "T" }
+  });
+} catch (err) {
+  console.log("Error (as expected for out-of-range):", err instanceof Error ? err.message : String(err));
+}
