@@ -18,6 +18,12 @@ import {
 // NOTE: Type for the map returned by `configureEquation`, keyed by component ID
 export type ComponentMoziEquation = { [key: string]: MoziEquation };
 
+// NOTE: Create, configure, and launch an equation in one step
+export interface LaunchEquation {
+    equation: MoziEquation;
+    result: RetMap;
+}
+
 
 /**
  * SECTION: Create a typed equation definition that can be initialized with parameters
@@ -78,7 +84,7 @@ export type ComponentMoziEquation = { [key: string]: MoziEquation };
  * });
  * ```
  */
-export const createEquation = function (
+export const createEq = function (
     name: string,
     description: string,
     configParams: ConfigParamMap,
@@ -123,7 +129,7 @@ export const createEquation = function (
  * // configured["Methane-Formula"] -> MoziEquation
  * ```
  */
-export const configureEquation = function (
+export const configureEq = function (
     component: Component,
     equation: MoziEquation,
     data: { name: string; symbol: string; value: number; unit: string }[],
@@ -179,7 +185,7 @@ export const configureEquation = function (
  * );
  * ```
  */
-export const launchEquation = function (
+export const launchEq = function (
     name: string,
     description: string,
     configParams: ConfigParamMap,
@@ -188,9 +194,9 @@ export const launchEquation = function (
     equation: Eq,
     data: { name: string; symbol: string; value: number; unit: string }[],
     args: ArgMap
-): RetMap {
+): LaunchEquation {
     // NOTE: create the equation instance
-    const eq: MoziEquation = createEquation(
+    const eq: MoziEquation = createEq(
         name,
         description,
         configParams,
@@ -206,5 +212,8 @@ export const launchEquation = function (
     const result = eq.calc(args);
 
     // NOTE: return the result
-    return result;
+    return {
+        equation: eq,
+        result
+    }
 }

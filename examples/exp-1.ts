@@ -3,7 +3,7 @@
 // Y = A + B*(C/T / sinh(C/T))^2 + D*(E/T / cosh(E/T))^2
 // Units: J/(kmol*K)
 
-import { createEquation, configureEquation } from "../src/docs/equation";
+import { createEq, configureEq } from "../src/docs/equation";
 import type { Eq, ConfigParamMap, ConfigArgMap, ConfigRetMap } from "../src/types";
 import type { Component } from "mozithermodb-settings";
 
@@ -40,7 +40,7 @@ const eq: Eq<P, A, R> = (p, a) => {
   };
 };
 
-const methaneCp = createEquation(
+const methaneCp = createEq(
   "Methane Ideal Gas Cp",
   "Ideal gas heat capacity for methane",
   params,
@@ -58,7 +58,7 @@ const component = {
 const componentId = "Methane-CH4";
 
 // Initialize with coefficient values (from attached data)
-const configured = configureEquation(
+const configured = configureEq(
   component,
   methaneCp, [
   { name: "A Constant", symbol: "A", value: 33298, unit: "J/kmol*K" },

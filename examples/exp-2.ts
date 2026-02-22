@@ -2,7 +2,7 @@
 // Y = exp(A + B/T + C*ln(T) + D*T^E)
 // Units: T in K, Y in Pa
 
-import { createEquation, configureEquation } from "../src/docs/equation";
+import { createEq, configureEq } from "../src/docs/equation";
 import type { Eq, ConfigParamMap, ConfigArgMap, ConfigRetMap } from "../src/types";
 import type { Component } from "mozithermodb-settings";
 
@@ -36,7 +36,7 @@ const eq: Eq<P, A, R> = (p, a) => {
     };
 };
 
-const vaporPressure = createEquation(
+const vaporPressure = createEq(
     "Liquid Vapor Pressure (DIPPR 101)",
     "DIPPR Eq. 101 using K and Pa",
     params,
@@ -54,7 +54,7 @@ const component = {
 const componentId = "Methane-CH4";
 
 // Initialize with coefficient values (from attached data)
-const configured = configureEquation(
+const configured = configureEq(
     component,
     vaporPressure,
     [
