@@ -25,10 +25,10 @@ export type Equation = {
     unit: string;
 };
 
+// ! key: equation symbol (e.g. "Cp_IG")
+// ! value: MoziEquation instance configured with the provided data
 export type ComponentEquation = {
-    [key: string]: {
-        [key: string]: MoziEquation;
-    };
+    [key: string]: MoziEquation;
 };
 
 // NOTE: Create, configure, and launch an equation in one step
@@ -180,7 +180,7 @@ export const buildComponentEquation = function (
     equation: MoziEquation,
     data: ThermoRecord[],
     componentKey: ComponentKey[] = ["Name-Formula", "Formula-State", "Name-State"]
-): ComponentEquation {
+): Record<string, ComponentEquation> {
     // NOTE: resolve component id
     const componentIds = componentKey.map(key => set_component_id(component, key));
 
@@ -191,13 +191,14 @@ export const buildComponentEquation = function (
     const equationSymbol = equation.equationSymbol;
 
     // NOTE: return the configured equation (keyed by component id for lookup)
-    const componentEquation: ComponentEquation = {};
+    const componentEquation: Record<string, ComponentEquation> = {};
     componentIds.forEach(id => {
         componentEquation[id] = {
             [equationSymbol]: equation
         };
     });
 
+    // res
     return componentEquation;
 }
 
