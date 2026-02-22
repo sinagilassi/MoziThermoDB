@@ -2,7 +2,7 @@
 import type { Component } from "mozithermodb-settings";
 import { createEq, buildComponentEquation } from "../src/docs/equation";
 import { buildComponentData } from "../src/docs/data";
-import type { ConfigParamMap, ConfigArgMap, ConfigRetMap, ThermoRecord, Eq } from "../src/types";
+import type { ConfigParamMap, ConfigArgMap, ConfigRetMap, RawThermoRecord, Eq } from "../src/types";
 import { Source, calcEq } from "../src/sources";
 
 type P = "A" | "B" | "C" | "D" | "E";
@@ -38,7 +38,10 @@ const eq: Eq<P, A> = (p, a) => {
     return { value: res, unit: "J/kmol*K", symbol: "Cp_IG" };
 };
 
-const data: ThermoRecord[] = [
+const data: RawThermoRecord[] = [
+    { name: "Name", symbol: "Name", value: "Methane", unit: "" },
+    { name: "Formula", symbol: "Formula", value: "CH4", unit: "" },
+    { name: "State", symbol: "State", value: "g", unit: "" },
     { name: "A Constant", symbol: "A", value: 33298, unit: "J/kmol*K" },
     { name: "B Constant", symbol: "B", value: 79933, unit: "J/kmol*K" },
     { name: "C Constant", symbol: "C", value: 2086.9, unit: "K" },
