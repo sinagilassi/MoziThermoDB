@@ -1,7 +1,7 @@
 {
   "name": "mozithermodb",
   "version": "1.0.0",
-  "description": "",
+  "description": "MoziThermoDB is a comprehensive database of thermodynamic properties for chemical species, designed to support various applications in chemistry and engineering.",
   "homepage": "https://github.com/sinagilassi/MoziThermoDB#readme",
   "bugs": {
     "url": "https://github.com/sinagilassi/MoziThermoDB/issues"
