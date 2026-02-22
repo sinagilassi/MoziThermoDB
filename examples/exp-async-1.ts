@@ -3,7 +3,7 @@
 // Y = A + B*(C/T / sinh(C/T))^2 + D*(E/T / cosh(E/T))^2
 // Units: J/(kmol*K)
 
-import { createEq, configureEq } from "../src/docs/equation";
+import { createEq, buildComponentEquation } from "../src/docs/equation";
 import type { Eq, ConfigParamMap, ConfigArgMap, ConfigRetMap } from "../src/types";
 import type { Component } from "mozithermodb-settings";
 
@@ -58,7 +58,7 @@ const component = {
 const componentId = "Methane-CH4";
 
 // Initialize with coefficient values (from attached data)
-const configured = configureEq(
+const configured = buildComponentEquation(
   component,
   methaneCp, [
   { name: "A Constant", symbol: "A", value: 33298, unit: "J/kmol*K" },

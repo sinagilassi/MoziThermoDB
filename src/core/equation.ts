@@ -15,6 +15,10 @@ import { timeIt } from '@/utils';
 
 export class MoziEquation {
     // SECTION: Attributes
+    name: string = 'Thermo Equation';
+    description: string = 'A thermodynamic equation with configurable parameters and arguments';
+
+    // NOTE: scaling options for parameters (e.g., if input data is in different units than expected)
     scaleOperation: 'multiply' | 'divide' = 'multiply';
     params: ParamMap = {};
 
@@ -26,13 +30,17 @@ export class MoziEquation {
 
     // NOTE: constructor
     constructor(
-        public name: string,
-        public description: string,
         public configParams: ConfigParamMap,
         public configArgs: ConfigArgMap,
         public configRet: ConfigRetMap,
-        private equation: Eq
-    ) { }
+        private equation: Eq,
+        name?: string,
+        description?: string
+    ) {
+        // set name and description if provided
+        if (name) this.name = name;
+        if (description) this.description = description;
+    }
 
     // NOTE: Config Parameters
     get configParameters() {

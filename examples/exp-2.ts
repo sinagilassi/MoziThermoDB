@@ -2,7 +2,7 @@
 // Y = exp(A + B/T + C*ln(T) + D*T^E)
 // Units: T in K, Y in Pa
 
-import { createEq, configureEq } from "../src/docs/equation";
+import { createEq, buildComponentEquation } from "../src/docs/equation";
 import type { Eq, ConfigParamMap, ConfigArgMap, ConfigRetMap } from "../src/types";
 import type { Component } from "mozithermodb-settings";
 
@@ -54,7 +54,7 @@ const component = {
 const componentId = "Methane-CH4";
 
 // Initialize with coefficient values (from attached data)
-const configured = configureEq(
+const configured = buildComponentEquation(
     component,
     vaporPressure,
     [

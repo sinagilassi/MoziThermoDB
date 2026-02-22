@@ -91,20 +91,20 @@ export interface LaunchEquationAsync {
  * ```
  */
 export const createEq = function (
-    name: string,
-    description: string,
     configParams: ConfigParamMap,
     configArgs: ConfigArgMap,
     configRet: ConfigRetMap,
-    equation: Eq
+    equation: Eq,
+    name?: string,
+    description?: string,
 ): MoziEquation {
     return new MoziEquation(
-        name,
-        description,
         configParams,
         configArgs,
         configRet,
-        equation
+        equation,
+        name,
+        description
     );
 }
 
@@ -135,7 +135,7 @@ export const createEq = function (
  * // configured["Methane-Formula"] -> MoziEquation
  * ```
  */
-export const configureEq = function (
+export const buildComponentEquation = function (
     component: Component,
     equation: MoziEquation,
     data: ThermoRecord[],
@@ -192,23 +192,23 @@ export const configureEq = function (
  * ```
  */
 export const launchEq = function (
-    name: string,
-    description: string,
     configParams: ConfigParamMap,
     configArgs: ConfigArgMap,
     configRet: ConfigRetMap,
     equation: Eq,
     data: ThermoRecord[],
-    args: ArgMap
+    args: ArgMap,
+    name?: string,
+    description?: string,
 ): LaunchEquation {
     // NOTE: create the equation instance
     const eq: MoziEquation = createEq(
-        name,
-        description,
         configParams,
         configArgs,
         configRet,
-        equation
+        equation,
+        name,
+        description
     );
 
     // NOTE: configure the equation with the provided data
@@ -259,24 +259,24 @@ export const launchEq = function (
  * ```
  */
 export const launchEqAsync = function (
-    name: string,
-    description: string,
     configParams: ConfigParamMap,
     configArgs: ConfigArgMap,
     configRet: ConfigRetMap,
     equation: Eq,
     data: ThermoRecord[],
-    args: ArgMap
+    args: ArgMap,
+    name?: string,
+    description?: string,
 ): Promise<LaunchEquationAsync> {
     return (async () => {
         // NOTE: create the equation instance
         const eq: MoziEquation = createEq(
-            name,
-            description,
             configParams,
             configArgs,
             configRet,
-            equation
+            equation,
+            name,
+            description
         );
 
         // NOTE: configure the equation with the provided data
