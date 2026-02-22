@@ -18,15 +18,21 @@ import {
 } from '@/types';
 
 // NOTE: Type for the map returned by `configureEquation`, keyed by component ID
-export type ComponentMoziEquation = { [key: string]: MoziEquation };
+export type Equation = {
+    equation: MoziEquation;
+    symbol: string;
+    unit: string;
+};
 
 // NOTE: Create, configure, and launch an equation in one step
 export interface LaunchEquation {
+    symbol: string;
     equation: MoziEquation;
     result: RetMap;
 }
 
 export interface LaunchEquationAsync {
+    symbol: string;
     equation: MoziEquation;
     result: Awaitable<RetMap>;
 }
@@ -64,7 +70,7 @@ export interface LaunchEquationAsync {
  * const eq: Eq<"T" | "P", "n" | "V", "Z"> = (params, args) => {
  *   const R = 8.314; // J/(mol*K)
  *   const Z = (params.P.value * args.V.value) / (args.n.value * R * params.T.value);
- *   return { Z: { value: Z, unit: "-", symbol: "Z" } };
+ *   return { value: Z, unit: "-", symbol: "Z" };
  * };
  *
  * // 3) Create the equation object
@@ -98,7 +104,16 @@ export const createEq = function (
     name?: string,
     description?: string,
 ): MoziEquation {
+    // NOTE: create equation symbol from return symbol (assumes single return value)
+    const retSymbols = Object.values(configRet).map(ret => ret.symbol);
+    if (retSymbols.length !== 1) {
+        throw new Error('Multiple return values found. Please provide a single return value for createEq.');
+    }
+    const equationSymbol = retSymbols[0];
+
+    // NOTE: create and return the equation instance
     return new MoziEquation(
+        equationSymbol,
         configParams,
         configArgs,
         configRet,
@@ -135,26 +150,22 @@ export const createEq = function (
  * // configured["Methane-Formula"] -> MoziEquation
  * ```
  */
-export const buildComponentEquation = function (
-    component: Component,
+export const buildEquation = function (
     equation: MoziEquation,
     data: ThermoRecord[],
-    componentKey: ComponentKey = "Name-Formula"
-): ComponentMoziEquation {
-    // NOTE: set component ID for logging
-    const component_id = set_component_id(component, componentKey);
-    console.log(`Configuring equation for component: ${component_id}`);
-
+): Equation {
     // NOTE: configure the equation with the provided data
     equation.configure(data);
 
-    // NOTE: create a map with the component ID as the key and the configured equation as the value
-    const res = {
-        [component_id]: equation
-    }
+    // NOTE: equation symbol
+    const equationSymbol = equation.equationSymbol;
 
-    // NOTE: return the configured equation instance
-    return res;
+    // NOTE: return the configured equation (keyed by symbol for lookup)
+    return {
+        equation: equation,
+        symbol: equationSymbol,
+        unit: equation.returnUnit
+    };
 }
 
 /**
@@ -169,7 +180,7 @@ export const buildComponentEquation = function (
  * - `args` must include all arguments required by `configArgs`
  *
  * Returns
- * - The evaluated result as a `RetMap`
+ * - The evaluated result as a single `Ret`
  *
  * Example
  * ```ts
@@ -220,6 +231,7 @@ export const launchEq = function (
     // NOTE: return the result
     return {
         equation: eq,
+        symbol: eq.equationSymbol,
         result
     }
 }
@@ -288,6 +300,7 @@ export const launchEqAsync = function (
         // NOTE: return the result
         return {
             equation: eq,
+            symbol: eq.equationSymbol,
             result
         }
     })();

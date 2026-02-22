@@ -30,6 +30,7 @@ export class MoziEquation {
 
     // NOTE: constructor
     constructor(
+        public equationSymbol: string,
         public configParams: ConfigParamMap,
         public configArgs: ConfigArgMap,
         public configRet: ConfigRetMap,
@@ -78,6 +79,17 @@ export class MoziEquation {
     // NOTE: return value lists
     get returnList() {
         return Object.keys(this.configRet);
+    }
+
+    get returnUnit() {
+        const res_ = Object.values(this.configRet).map(ret => ret.unit);
+
+        // NOTE: assumes single return value for now
+        if (res_.length !== 1) {
+            throw new Error('Multiple return values found. Please provide a single return value for createEq.');
+        }
+
+        return res_[0];
     }
 
     get returnSymbolList() {

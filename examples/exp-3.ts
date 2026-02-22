@@ -27,7 +27,7 @@ const ret: ConfigRetMap<R> = {
     Cp: { name: "Heat Capacity (ideal gas)", symbol: "Cp", unit: "J/kmol*K" }
 };
 
-const eq: Eq<P, A, R> = (p, a) => {
+const eq: Eq<P, A> = (p, a) => {
     const T = a.T.value;
     const x = p.C.value / T;
     const y = p.E.value / T;
@@ -35,9 +35,7 @@ const eq: Eq<P, A, R> = (p, a) => {
     const termD = (y / Math.cosh(y)) ** 2;
     const Cp = p.A.value + p.B.value * termB + p.D.value * termD;
 
-    return {
-        Cp: { value: Cp, unit: "J/kmol*K", symbol: "Cp" }
-    };
+    return { value: Cp, unit: "J/kmol*K", symbol: "Cp" };
 };
 
 const result = launchEq(

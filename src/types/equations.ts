@@ -35,16 +35,15 @@ export type Ret = SymbolicQuantity;
 // Maps with strong key typing (optional)
 export type ParamMap<K extends string = string> = Record<K, Param>;
 export type ArgMap<K extends string = string> = Record<K, Arg>;
-export type RetMap<K extends string = string> = Record<K, Ret>;
+export type RetMap = Ret;
 
 // NOTE: Function type for equations, with strong typing for parameter, argument, and return keys
 export type Awaitable<T> = T | Promise<T>;
 
 export type Eq<
     PKeys extends string = string,
-    AKeys extends string = string,
-    RKeys extends string = string
+    AKeys extends string = string
 > = (
     params: ParamMap<PKeys>,
     args: ArgMap<AKeys>
-) => Awaitable<RetMap<RKeys>>;
+) => Awaitable<RetMap>;

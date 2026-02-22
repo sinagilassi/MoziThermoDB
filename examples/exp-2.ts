@@ -2,7 +2,7 @@
 // Y = exp(A + B/T + C*ln(T) + D*T^E)
 // Units: T in K, Y in Pa
 
-import { createEq, buildComponentEquation } from "../src/docs/equation";
+import { createEq, buildEquation } from "../src/docs/equation";
 import type { Eq, ConfigParamMap, ConfigArgMap, ConfigRetMap } from "../src/types";
 import type { Component } from "mozithermodb-settings";
 
@@ -26,14 +26,12 @@ const ret: ConfigRetMap<R> = {
     VaPr: { name: "Vapor Pressure", symbol: "VaPr", unit: "Pa" }
 };
 
-const eq: Eq<P, A, R> = (p, a) => {
+const eq: Eq<P, A> = (p, a) => {
     const T = a.T.value;
     const lnY = p.A.value + p.B.value / T + p.C.value * Math.log(T) + p.D.value * T ** p.E.value;
     const Pvap = Math.exp(lnY);
 
-    return {
-        VaPr: { value: Pvap, unit: "Pa", symbol: "VaPr" }
-    };
+    return { value: Pvap, unit: "Pa", symbol: "VaPr" };
 };
 
 const vaporPressure = createEq(
@@ -54,8 +52,7 @@ const component = {
 const componentId = "Methane-CH4";
 
 // Initialize with coefficient values (from attached data)
-const configured = buildComponentEquation(
-    component,
+const VaPr_eq_source = buildEquation(
     vaporPressure,
     [
         { name: "A constant", symbol: "A", value: 39.205, unit: "-" },
@@ -64,16 +61,15 @@ const configured = buildComponentEquation(
         { name: "D constant", symbol: "D", value: 3.1019e-5, unit: "1/K^E" },
         { name: "E constant", symbol: "E", value: 2, unit: "-" }
     ],
-    "Name-Formula"
 );
 
-const componentEq = configured[componentId];
+const VaPr_eq = VaPr_eq_source.equation; // extract the equation for methane
 
 // Disable timing if desired
-componentEq.enableTiming = true;
+VaPr_eq.enableTiming = true;
 
 // Evaluate at temperature (K)
-const result = componentEq.calc({
+const result = VaPr_eq.calc({
     T: { value: 298.15, unit: "K", symbol: "T" }
 });
 
