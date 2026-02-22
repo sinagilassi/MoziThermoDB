@@ -64,3 +64,6 @@ py-pkg/
 
 # private
 private/
+
+# compiled files
+*.tgz
