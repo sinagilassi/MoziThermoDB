@@ -3,7 +3,7 @@ import type { Component } from "mozithermodb-settings";
 import { createEq, buildComponentEquation } from "../src/docs/equation";
 import { buildComponentData } from "../src/docs/data";
 import type { ConfigParamMap, ConfigArgMap, ConfigRetMap, ThermoRecord, Eq } from "../src/types";
-import { Source } from "../src/sources/source";
+import { Source, calcEq } from "../src/sources";
 
 type P = "A" | "B" | "C" | "D" | "E";
 type A = "T" | "R";
@@ -92,3 +92,11 @@ const eqSrc = source.eqBuilder([methane], "Cp_IG");
 console.log("Built equation source:", eqSrc);
 const result = source.execEq([methane], eqSrc!, { T: 298.15 });
 console.log("Result:", result);
+
+// Direct calc using calcEq (single component)
+const eqSrcSingle = eqSrc?.[componentId];
+console.log("Single component equation source:", eqSrcSingle);
+if (eqSrcSingle) {
+    const direct = calcEq(eqSrcSingle, { T: 298.15 });
+    console.log("Direct calcEq:", direct);
+}
