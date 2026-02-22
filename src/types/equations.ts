@@ -38,6 +38,8 @@ export type ArgMap<K extends string = string> = Record<K, Arg>;
 export type RetMap<K extends string = string> = Record<K, Ret>;
 
 // NOTE: Function type for equations, with strong typing for parameter, argument, and return keys
+export type Awaitable<T> = T | Promise<T>;
+
 export type Eq<
     PKeys extends string = string,
     AKeys extends string = string,
@@ -45,4 +47,4 @@ export type Eq<
 > = (
     params: ParamMap<PKeys>,
     args: ArgMap<AKeys>
-) => RetMap<RKeys>;
+) => Awaitable<RetMap<RKeys>>;

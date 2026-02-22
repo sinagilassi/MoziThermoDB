@@ -12,7 +12,8 @@ import {
     ConfigRetMap,
     Eq,
     ArgMap,
-    RetMap
+    RetMap,
+    Awaitable
 } from '@/types';
 
 // NOTE: Type for the map returned by `configureEquation`, keyed by component ID
@@ -24,6 +25,10 @@ export interface LaunchEquation {
     result: RetMap;
 }
 
+export interface LaunchEquationAsync {
+    equation: MoziEquation;
+    result: Awaitable<RetMap>;
+}
 
 /**
  * SECTION: Create a typed equation definition that can be initialized with parameters
@@ -216,4 +221,39 @@ export const launchEq = function (
         equation: eq,
         result
     }
+}
+
+export const launchEqAsync = function (
+    name: string,
+    description: string,
+    configParams: ConfigParamMap,
+    configArgs: ConfigArgMap,
+    configRet: ConfigRetMap,
+    equation: Eq,
+    data: { name: string; symbol: string; value: number; unit: string }[],
+    args: ArgMap
+): Promise<LaunchEquationAsync> {
+    return (async () => {
+        // NOTE: create the equation instance
+        const eq: MoziEquation = createEq(
+            name,
+            description,
+            configParams,
+            configArgs,
+            configRet,
+            equation
+        );
+
+        // NOTE: configure the equation with the provided data
+        eq.configure(data);
+
+        // NOTE: directly evaluate the equation with the provided arguments
+        const result = await eq.calcAsync(args);
+
+        // NOTE: return the result
+        return {
+            equation: eq,
+            result
+        }
+    })();
 }

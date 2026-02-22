@@ -107,7 +107,7 @@ export class MoziEquation {
 
     // SECTION: Evaluation Equation
     @timeIt({ label: 'MoziEquation.calc', enabledKey: 'enableTiming' })
-    public calc(args: ArgMap) {
+    public calc(args: ArgMap): RetMap {
         // NOTE: parameter setup
         const params = this.params;
 
@@ -124,6 +124,33 @@ export class MoziEquation {
 
         // NOTE: evaluate the equation function with the current parameters and input arguments
         const result = this.equation(params, args);
+        if (result && typeof (result as Promise<RetMap>).then === 'function') {
+            throw new Error('Equation returned a Promise. Use calcAsync instead.');
+        }
+
+        // NOTE: return the result of the equation evaluation
+        return result as RetMap;
+    }
+
+    // SECTION: Evaluation Equation (Async)
+    @timeIt({ label: 'MoziEquation.calcAsync', enabledKey: 'enableTiming' })
+    public async calcAsync(args: ArgMap): Promise<RetMap> {
+        // NOTE: parameter setup
+        const params = this.params;
+
+        // NOTE: argument setup
+        // ! check symbol by symbol in configArgs and args to ensure correct mapping
+        const argsSymbols = Object.values(args).map(arg => arg.symbol);
+
+        // iterate through config arguments and match with input args
+        for (const symbol of this.argumentSymbolList) {
+            if (!argsSymbols.includes(symbol)) {
+                throw new Error(`Missing argument for symbol: ${symbol}`);
+            }
+        }
+
+        // NOTE: evaluate the equation function with the current parameters and input arguments
+        const result = await this.equation(params, args);
 
         // NOTE: return the result of the equation evaluation
         return result;
@@ -136,7 +163,8 @@ export class MoziEquation {
 
         // NOTE: return an object with the equation's name, description, and a function to evaluate it
         return {
-            calc: (args: ArgMap) => this.calc(args)
+            calc: (args: ArgMap) => this.calc(args),
+            calcAsync: (args: ArgMap) => this.calcAsync(args)
         };
     }
 }
