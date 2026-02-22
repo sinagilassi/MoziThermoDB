@@ -7,7 +7,10 @@ import {
 // ! LOCALS
 import { RawThermoRecord, ThermoRecordMap } from '@/types';
 import { MoziData } from '@/core';
-import { assertRawThermoRecordMatchesComponent } from '@/utils';
+import {
+    assertRawThermoRecordMatchesComponent,
+    extractComponentDataFromRawThermoRecord
+} from '@/utils';
 
 
 // NOTE: Type for the map returned by `configureData`, keyed by component ID
@@ -85,3 +88,46 @@ export const buildComponentData = (
 
     return componentData;
 }
+
+/**
+ * Build a merged component-keyed thermo-data source for multiple components.
+ *
+ * Purpose
+ * - Match each component to its corresponding raw thermo record block
+ * - Build cleaned thermo-data maps for each component
+ * - Merge all component-id aliases into a single `ComponentData` source
+ *
+ * Notes
+ * - `data` must be an array of raw-data blocks (`RawThermoRecord[][]`), one block per component
+ * - Matching is performed using `dataComponentMatchKey`
+ * - Each component may emit multiple aliases depending on `componentKey`
+ */
+export const buildComponentsData = (
+    components: Component[],
+    data: RawThermoRecord[][],
+    componentKey: ComponentKey[] = ["Name-Formula", "Formula-State", "Name-State"],
+    enableDataComponentMatchCheck: boolean = false,
+    dataComponentMatchKey: ComponentKey = "Name-Formula"
+): ComponentData => {
+    const componentData: ComponentData = {};
+
+    components.forEach(component => {
+        const componentRawData = extractComponentDataFromRawThermoRecord(
+            component,
+            data,
+            dataComponentMatchKey
+        );
+
+        const built = buildComponentData(
+            component,
+            componentRawData.records,
+            componentKey,
+            enableDataComponentMatchCheck,
+            dataComponentMatchKey
+        );
+
+        Object.assign(componentData, built);
+    });
+
+    return componentData;
+};

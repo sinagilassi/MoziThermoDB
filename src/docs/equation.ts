@@ -6,7 +6,10 @@ import {
 } from 'mozithermodb-settings';
 // ! LOCALS
 import { MoziEquation } from "@/core";
-import { assertRawThermoRecordMatchesComponent } from "@/utils";
+import {
+    assertRawThermoRecordMatchesComponent,
+    extractComponentDataFromRawThermoRecord
+} from "@/utils";
 import {
     ConfigParamMap,
     ConfigArgMap,
@@ -235,6 +238,38 @@ export const buildComponentEquation = function (
     // res
     return componentEquation;
 }
+
+
+export const buildComponentsEquation = function (
+    components: Component[],
+    equation: MoziEquation,
+    data: RawThermoRecord[][],
+    componentKey: ComponentKey[] = ["Name-Formula", "Formula-State", "Name-State"],
+    enableDataComponentMatchCheck: boolean = false,
+    dataComponentMatchKey: ComponentKey = "Name-Formula"
+): Record<string, ComponentEquation> {
+    // NOTE: build a component equation for each component and merge into a single map
+    const componentEquations: Record<string, ComponentEquation> = {};
+
+    // iterate over components and build an equation for each using the provided data
+    components.forEach(component => {
+        const componentData = extractComponentDataFromRawThermoRecord(component, data, dataComponentMatchKey);
+        const componentEq = buildComponentEquation(
+            component,
+            equation,
+            componentData.records,
+            componentKey,
+            enableDataComponentMatchCheck,
+            dataComponentMatchKey
+        );
+        Object.assign(componentEquations, componentEq);
+    }
+    );
+
+    // res
+    return componentEquations;
+}
+
 
 
 /**

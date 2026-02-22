@@ -1,7 +1,8 @@
 // import libs
 import { set_component_id } from 'mozithermodb-settings';
 import type { Component, ComponentKey } from 'mozithermodb-settings';
-import { ThermoRecord, RawThermoRecord } from '@/types/database';
+// ! LOCALS
+import { ThermoRecord, RawThermoRecord, ComponentThermoData, ComponentRawThermoData } from '@/types/database';
 
 export const cleanRawThermoRecord = (
     data: RawThermoRecord[],
@@ -56,3 +57,29 @@ export const assertRawThermoRecordMatchesComponent = (
         );
     }
 };
+
+// SECTION: Extract component info from raw data
+export const extractComponentDataFromRawThermoRecord = (
+    component: Component,
+    data: RawThermoRecord[][],
+    componentKey: ComponentKey = "Name-Formula"
+): ComponentRawThermoData => {
+    // Find the matching data entry for the component
+    const matchingData = data.find(entry => {
+        try {
+            assertRawThermoRecordMatchesComponent(component, entry, componentKey);
+            return true;
+        } catch {
+            return false;
+        }
+    });
+
+    if (!matchingData) {
+        throw new Error(`No matching data found for component '${component.name}' using key '${componentKey}'.`);
+    }
+
+    return {
+        component,
+        records: matchingData
+    };
+}

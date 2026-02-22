@@ -1,3 +1,4 @@
+import { Component } from 'mozithermodb-settings';
 // import libs
 
 // NOTE: Raw ThermoRecord
@@ -15,3 +16,14 @@ export type ThermoRecordMap = {
     }
 }
 
+// NOTE: Component raw thermo data
+export type ComponentRawThermoData = {
+    component: Component;
+    records: RawThermoRecord[];
+}
+
+// NOTE: ComponentData is a map of component id to ThermoRecordMap
+export type ComponentThermoData = {
+    component: Component;
+    records: ThermoRecordMap;
+}
