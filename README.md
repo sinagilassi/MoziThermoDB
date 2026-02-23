@@ -15,7 +15,6 @@ This project is licensed under the Apache License. You are free to use, modify, 
 
 For any question, contact me on [LinkedIn](https://www.linkedin.com/in/sina-gilassi/)
 
-
 ## 👨‍💻 Authors
 
 - [@sinagilassi](https://www.github.com/sinagilassi)
