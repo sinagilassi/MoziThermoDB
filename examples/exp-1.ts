@@ -3,9 +3,11 @@
 // Y = A + B*(C/T / sinh(C/T))^2 + D*(E/T / cosh(E/T))^2
 // Units: J/(kmol*K)
 
+import type { Component } from "mozithermodb-settings";
+import { ComponentSchema } from "mozithermodb-settings";
+// ! LOCALS
 import { createEq, buildEquation, Equation, buildComponentEquation } from "../src/docs/equation";
 import type { Eq, ConfigParamMap, ConfigArgMap, ConfigRetMap, RawThermoRecord } from "../src/types";
-import type { Component } from "mozithermodb-settings";
 import { assertRawThermoRecordMatchesComponent } from "../src/utils";
 
 type P = "A" | "B" | "C" | "D" | "E";
@@ -48,18 +50,18 @@ const methaneCp = createEq(
   "Ideal gas heat capacity for methane",
 );
 
-const component = {
+const component = ComponentSchema.parse({
   name: "Methane",
   formula: "CH4",
   state: 'g'
-} as Component;
+});
 
 // fake component id for this example (matches the data records for the component)
-const componentFake = {
+const componentFake = ComponentSchema.parse({
   name: "Octane",
-  formula: "CH4",
+  formula: "C8H18",
   state: 'g'
-} as Component;
+});
 
 const componentId = "Methane-CH4";
 
