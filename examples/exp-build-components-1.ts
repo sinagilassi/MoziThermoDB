@@ -1,7 +1,7 @@
 // Example: buildComponentsEquation for multiple components using one equation template
 import type { Component } from "mozithermodb-settings";
-import { createEq, buildComponentsEquation } from "../src/docs/equation";
-import { buildComponentsData } from "../src/docs/data";
+import { createEq, buildComponentsEquation } from "../src";
+import { buildComponentsData } from "../src";
 import type {
     ConfigParamMap,
     ConfigArgMap,
