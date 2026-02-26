@@ -455,10 +455,30 @@ export class MoziMatrixData {
         return propValue;
     }
 
+    // SECTION: Find mixture id from component names (handles both orderings A|B and B|A)
+    findMixtureId(componentNames: string[]): string {
+        if (!componentNames || componentNames.length === 0) {
+            throw new Error("Component names array is empty!");
+        }
+
+        // Try both orderings
+        const mixtureName1 = componentNames.join(this.mixtureDelimiter); // e.g. ["methanol", "ethanol"] → "methanol|ethanol"
+        const mixtureName2 = [...componentNames].reverse().join(this.mixtureDelimiter); // e.g. ["ethanol", "methanol"] → "ethanol|methanol"
+
+        // find mixture id that matches these components
+        for (const id of this.mixtureIds) {
+            if (id === mixtureName1 || id === mixtureName2) {
+                return id;
+            }
+        }
+
+        throw new Error(`No mixture found for components '${componentNames.join(", ")}'.`);
+    }
+
     // SECTION: Get all matrix properties for a given property symbol (e.g. "a_i_j | component1 | component2" or "a | component1 | component2") for all pairs of components in a mixture
     ijs(
         propertySymbol: string,
-        propDelimiter: string = "|",
+        propDelimiter: string = "_",
     ): { [componentPair: string]: CustomProperty } {
         // NOTE: extract property symbol
         const propId = propertySymbol.split(propDelimiter)[0].trim(); // e.g. "a_i_j | component1 | component2" → "a_i_j"
@@ -470,20 +490,9 @@ export class MoziMatrixData {
 
         // NOTE: components
         const componentNames = propertySymbol.split(propDelimiter).slice(1).map(s => s.trim()); // e.g. "a_i_j | methanol | ethanol" → ["methanol", "ethanol"]
-        const mixtureName1 = componentNames.join(this.mixtureDelimiter); // e.g. ["methanol", "ethanol"] → "methanol|ethanol"
-        const mixtureName2 = componentNames.reverse().join(this.mixtureDelimiter); // e.g. ["ethanol", "methanol"] → "ethanol|methanol"
 
-        // find mixture id that matches these components
-        let mixtureId: string | null = null;
-        for (const id of this.mixtureIds) {
-            if (id === mixtureName1 || id === mixtureName2) {
-                mixtureId = id;
-                break;
-            }
-        }
-        if (!mixtureId) {
-            throw new Error(`No mixture found for components '${componentNames.join(", ")}' in property symbol '${propertySymbol}'.`);
-        }
+        // find mixture id that matches these components (handles both A|B and B|A)
+        const mixtureId = this.findMixtureId(componentNames);
 
         // NOTE: get mixture components
         const components = this.matrixData[mixtureId].components;
@@ -511,33 +520,138 @@ export class MoziMatrixData {
     }
 
 
-    // SECTION: 2d matrix (only values, no units)
+    // SECTION: Core matrix builder - builds both numeric and dictionary formats
     /**
-     * Get 2d matrix of property values for a given property symbol as:
-     * 1- a_i_j | component1 | component2
-     * 2- a | component1 | component2
-     * 3- a_component1_component2
+     * Core internal method to build matrix data for a given property symbol and components.
      *
-     * @param propertySymbol - property symbol in one of the above formats
-     * @param components - optional list of components to specify the property for (if not included in the property symbol)
-     * @returns 2d array of property values for the specified property symbol and components in the mixture
+     * @param propertySymbol - property symbol such as "Alpha_i_j" or "a_i_j"
+     * @param components - ordered list of components to build the matrix from
+     * @returns Object containing both numeric matrix and dictionary with matrix property values
      *
-     * Notes
-     * - components is an optional parameter which is used to specify the component indices in the 2d matrix if the component is not provided, the component indices will be determined based on the order of components in the mixture data.
+     * @throws Error if property symbol or components are empty
+     *
+     * @internal
+     */
+    private _buildMatrixData(
+        propertySymbol: string,
+        components: Component[],
+    ): { numeric: number[][], alphabetic: { [key: string]: number } } {
+        try {
+            // NOTE: check property symbol
+            if (!propertySymbol || propertySymbol.trim() === "") {
+                throw new Error("Property symbol is empty!");
+            }
+
+            // NOTE: check components
+            if (!components || components.length === 0) {
+                throw new Error("Components array is empty!");
+            }
+
+            // NOTE: parse property symbol to get prefix
+            const propPrefix = this.getPropertyPrefix(propertySymbol); // e.g. "Alpha_i_j" → "Alpha"
+
+            // NOTE: construct mixture id from components and find the actual stored mixture id
+            const componentNames = components.map(c => c.name);
+            const mixtureId = this.findMixtureId(componentNames);
+
+            // NOTE: get component count
+            const componentNum = components.length;
+
+            // NOTE: get property matrix data for this mixture
+            const propMatrix = this.getPropertyMatrix(mixtureId, propPrefix);
+
+            // NOTE: get component indices for this mixture
+            const componentIndices = this.getComponentIndex(mixtureId);
+
+            // NOTE: matrix data (2D array initialized)
+            const matIj: number[][] = Array(componentNum)
+                .fill(null)
+                .map(() => Array(componentNum).fill(0));
+
+            // matrix data dictionary
+            const matIjDict: { [key: string]: number } = {};
+
+            // SECTION: iterate over components in order to build matrix
+            for (let i = 0; i < componentNum; i++) {
+                for (let j = 0; j < componentNum; j++) {
+                    const component_i = components[i];
+                    const component_j = components[j];
+
+                    // get component ids using the componentKey
+                    const componentId_i = set_component_id(component_i, this.componentKey);
+                    const componentId_j = set_component_id(component_j, this.componentKey);
+
+                    // get indices in the property matrix
+                    const rowIndex = componentIndices[componentId_i];
+                    const colIndex = componentIndices[componentId_j];
+
+                    // get value from property matrix
+                    const value = propMatrix[rowIndex][colIndex];
+
+                    // set value in numeric matrix
+                    matIj[i][j] = value;
+
+                    // set value in dictionary with pipe-separated key
+                    const keyDict = `${component_i.name} | ${component_j.name}`;
+                    matIjDict[keyDict] = value ?? 0;
+                }
+            }
+
+            // NOTE: validate results
+            if (!matIj || !matIjDict) {
+                throw new Error("Matrix data is null!");
+            }
+
+            return {
+                numeric: matIj,
+                alphabetic: matIjDict
+            };
+        } catch (e) {
+            throw new Error(`Getting matrix data failed! ${e instanceof Error ? e.message : String(e)}`);
+        }
+    }
+
+    // SECTION: Get 2D numeric matrix
+    /**
+     * Get 2D numeric array of property values for a given property symbol and components.
+     *
+     * @param propertySymbol - property symbol such as "Alpha_i_j" or "a_i_j"
+     * @param components - ordered list of components to build the matrix from
+     * @returns 2D numeric array with matrix property values
+     *
+     * @throws Error if property symbol or components are empty
+     *
+     * @example
+     * const matrix = data.mat("Alpha_i_j", [component1, component2]);
+     * // Returns: [[1.2, 3.4], [5.6, 7.8]]
      */
     mat(
         propertySymbol: string,
-        components?: Component[],
+        components: Component[],
     ): number[][] {
-        // NOTE: extract property symbol, property delimiter is unknown
-        const { propertyPrefix, propertyDelimiter, i, j } = propertyParser(propertySymbol);
-
-        // extract just the values into a 2d array
-        const res: number[][] = [];
-
-
-
-        return res;
+        const result = this._buildMatrixData(propertySymbol, components);
+        return result.numeric;
     }
 
+    // SECTION: Get matrix as dictionary
+    /**
+     * Get dictionary of property values with component-pair keys for a given property symbol and components.
+     *
+     * @param propertySymbol - property symbol such as "Alpha_i_j" or "a_i_j"
+     * @param components - ordered list of components to build the matrix from
+     * @returns Dictionary with keys in format "component_name | component_name" and numeric values
+     *
+     * @throws Error if property symbol or components are empty
+     *
+     * @example
+     * const matrixDict = data.matDict("Alpha_i_j", [component1, component2]);
+     * // Returns: { "ethanol | methanol": 1.2, "ethanol | ethanol": 3.4, ... }
+     */
+    matDict(
+        propertySymbol: string,
+        components: Component[],
+    ): { [key: string]: number } {
+        const result = this._buildMatrixData(propertySymbol, components);
+        return result.alphabetic;
+    }
 }
