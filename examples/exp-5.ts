@@ -131,6 +131,7 @@ console.log(res11)
 
 // SECTION: mat
 const res12 = moziMatrixData.mat(
-    "a | methanol | ethanol"
+    "a",
+    [methanol, ethanol],
 )
 console.log(res12)
