@@ -1,5 +1,5 @@
 // import libs
-import { type Component, ComponentKey, set_component_id, CustomProperty, create_binary_mixture_id } from 'mozithermodb-settings';
+import { type Component, ComponentKey, BinaryMixtureKey, set_component_id, CustomProperty, create_binary_mixture_id } from 'mozithermodb-settings';
 // ! LOCALS
 import {
     RawThermoRecord,
@@ -7,7 +7,7 @@ import {
     MixtureRawThermoData,
     MixtureComponentsRawThermoData
 } from '@/types';
-import { cleanRawThermoRecord, getMixtureComponents, getMixtureProps, propertyParser } from '@/utils';
+import { cleanRawThermoRecord, getMixtureComponents, getMixtureProps, propertyParser, generateMixturePropertyKey } from '@/utils';
 
 // SECTION: Types & Interfaces
 type Props = {
@@ -63,6 +63,7 @@ export class MoziMatrixData {
     // SECTION: constructor
     constructor(
         public data: RawThermoRecord[][],
+        public mixtureKey: BinaryMixtureKey = "Name-Formula",
         public componentKey: ComponentKey = "Name-Formula",
         name?: string,
         description?: string
@@ -368,7 +369,13 @@ export class MoziMatrixData {
         mixtureId: string,
     ): CustomProperty {
         // NOTE: property symbol format: "prop_i_j" where i and j are component indices in the mixture
-        const propPrefix = this.getPropertyPrefix(propertySymbol); // e.g. "a_i_j" → "a"
+        const {
+            propertyPrefix: propPrefix,
+            propertyDelimiter,
+            mode
+        } = propertyParser(
+            propertySymbol,
+        )
         // > unit for this property
         const propUnit = this.getPropertyUnit(mixtureId, propPrefix);
 
@@ -391,8 +398,17 @@ export class MoziMatrixData {
         // NOTE: extract property value for this pair of components from the property matrix
         const propValue = propData[i][j];
 
+        // ! create custom property object
+        const propKey = generateMixturePropertyKey(
+            propPrefix,
+            component_i,
+            component_j,
+            this.componentKey,
+            propertyDelimiter
+        );
+
         const customProp: CustomProperty = {
-            symbol: propertySymbol,
+            symbol: propKey,
             value: propValue,
             unit: propUnit
         };
@@ -478,15 +494,17 @@ export class MoziMatrixData {
     // SECTION: Get all matrix properties for a given property symbol (e.g. "a_i_j | component1 | component2" or "a | component1 | component2") for all pairs of components in a mixture
     ijs(
         propertySymbol: string,
-        propDelimiter: string = "_",
     ): { [componentPair: string]: CustomProperty } {
         // NOTE: extract property symbol
-        const propId = propertySymbol.split(propDelimiter)[0].trim(); // e.g. "a_i_j | component1 | component2" → "a_i_j"
-        // >> prefix
-        const propPrefix = propId.includes(this.propIdentifier) ? this.getPropertyPrefix(propId) : propId; // e.g. "a_i_j" → "a"
-        // >> loop prop
-        const propertySymbolLoop = propPrefix + this.propIdentifier; // e.g. "a" + "_i_j" → "a_i_j"
-
+        const {
+            propertyPrefix: propPrefix,
+            propertyDelimiter: propDelimiter,
+            i,
+            j,
+            mode
+        } = propertyParser(
+            propertySymbol,
+        )
 
         // NOTE: components
         const componentNames = propertySymbol.split(propDelimiter).slice(1).map(s => s.trim()); // e.g. "a_i_j | methanol | ethanol" → ["methanol", "ethanol"]
@@ -510,7 +528,7 @@ export class MoziMatrixData {
                 // component pair key for res
                 const componentPairKey = `${component_i.name}-${component_i.formula} | ${component_j.name}-${component_j.formula}`; // e.g. "methanol-CH3OH | ethanol-C2H5OH"
                 // get property value for this pair of components from the property matrix
-                const propValue = this.getMatrixProperty(propertySymbolLoop, [component_i, component_j], mixtureId);
+                const propValue = this.getMatrixProperty(propertySymbol, [component_i, component_j], mixtureId);
 
                 res[componentPairKey] = propValue;
             }
