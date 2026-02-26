@@ -7,7 +7,7 @@ import {
     MixtureRawThermoData,
     MixtureComponentsRawThermoData
 } from '@/types';
-import { cleanRawThermoRecord, getMixtureComponents, getMixtureProps } from '@/utils';
+import { cleanRawThermoRecord, getMixtureComponents, getMixtureProps, propertyParser } from '@/utils';
 
 // SECTION: Types & Interfaces
 type Props = {
@@ -512,33 +512,30 @@ export class MoziMatrixData {
 
 
     // SECTION: 2d matrix (only values, no units)
+    /**
+     * Get 2d matrix of property values for a given property symbol as:
+     * 1- a_i_j | component1 | component2
+     * 2- a | component1 | component2
+     * 3- a_component1_component2
+     *
+     * @param propertySymbol - property symbol in one of the above formats
+     * @param components - optional list of components to specify the property for (if not included in the property symbol)
+     * @returns 2d array of property values for the specified property symbol and components in the mixture
+     *
+     * Notes
+     * - components is an optional parameter which is used to specify the component indices in the 2d matrix if the component is not provided, the component indices will be determined based on the order of components in the mixture data.
+     */
     mat(
         propertySymbol: string,
-        propDelimiter: string = "|",
+        components?: Component[],
     ): number[][] {
-        // get all matrix properties for this property symbol
-        const matrixProps = this.ijs(propertySymbol, propDelimiter);
+        // NOTE: extract property symbol, property delimiter is unknown
+        const { propertyPrefix, propertyDelimiter, i, j } = propertyParser(propertySymbol);
 
         // extract just the values into a 2d array
         const res: number[][] = [];
 
-        Object.values(matrixProps).forEach(prop => {
-            const value = prop.value;
-            const [component_i, component_j] = prop.symbol.split("|").map(s => s.trim());
-            // find indices for component_i and component_j
-            const components = Object.keys(matrixProps).map(key => key.split("|").map(s => s.trim())).flat();
-            const uniqueComponents = Array.from(new Set(components));
-            const index_i = uniqueComponents.findIndex(c => c === component_i);
-            const index_j = uniqueComponents.findIndex(c => c === component_j);
 
-            // ensure res has enough rows
-            while (res.length <= index_i) {
-                res.push([]);
-            }
-
-            res[index_i][index_j] = value;
-        }
-        );
 
         return res;
     }
