@@ -12,9 +12,9 @@ const component = {
 
 
 const records: RawThermoRecord[] = [
-    { name: "Name", symbol: "Methane", value: "N/A", unit: "N/A" },
-    { name: "Formula", symbol: "CH4", value: "N/A", unit: "N/A" },
-    { name: "State", symbol: "g", value: "N/A", unit: "N/A" },
+    { name: "Name", symbol: "-", value: "Methane", unit: "N/A" },
+    { name: "Formula", symbol: "-", value: "CH4", unit: "N/A" },
+    { name: "State", symbol: "-", value: "g", unit: "N/A" },
     { name: "Molecular Weight", symbol: "MW", value: 16.04, unit: "g/mol" },
     { name: "Critical Temperature", symbol: "Tc", value: 190.56, unit: "K" },
     { name: "Critical Pressure", symbol: "Pc", value: 4.5992, unit: "MPa" },

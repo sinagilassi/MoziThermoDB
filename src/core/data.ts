@@ -12,6 +12,7 @@ export class MoziData {
 
     // SECTION: thermo data
     rawThermoRecord: RawThermoRecord[] = [];
+    // ! NOTE: cleaned data with numeric values only, non-numeric metadata rows removed
     data: ThermoRecord[] = [];
 
     // NOTE: created at

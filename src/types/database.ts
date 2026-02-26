@@ -27,3 +27,26 @@ export type ComponentThermoData = {
     component: Component;
     records: ThermoRecordMap;
 }
+
+// SECTION: Mixture data types
+// NOTE: Mixture components raw thermo data, containing the list of components and the raw thermo records for the mixture
+export type MixtureComponentsRawThermoData = {
+    components: Component[];
+    records: RawThermoRecord[];
+}
+
+// NOTE: MixtureRawThermoData is a map of mixture name to raw thermo records for that mixture
+export type MixtureRawThermoData = {
+    [mixture: string]: MixtureComponentsRawThermoData;
+}
+
+// NOTE: ThermoMatrixRecordMap is a map of mixture value to ThermoRecordMap
+export type ThermoMatrixRecordMap = {
+    [mixture: string]: ThermoRecordMap;
+}
+
+// NOTE: Mixture thermo data
+export type MixtureThermoData = {
+    components: Component[];
+    records: ThermoMatrixRecordMap;
+}

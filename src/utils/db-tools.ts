@@ -1,7 +1,3 @@
-/**
- * Utility helpers for validating, normalizing, and extracting thermo database
- * records and component-linked payloads.
- */
 // import libs
 import { set_component_id } from 'mozithermodb-settings';
 import type { Component, ComponentKey } from 'mozithermodb-settings';
@@ -160,3 +156,79 @@ export const buildComponentRawThermoData = (
         records: rawRecords
     };
 };
+
+/**
+ * Extracts component information from a raw thermo record set by matching against the provided component key, then builds and returns a `Component` object.
+ *
+ * Throws if required identity records are missing or if the constructed component does not match the expected format.
+ * @param data
+ * @returns Component
+ */
+export const getMixtureComponents = (
+    data: RawThermoRecord[],
+    componentKeyParts: string[] = ["Name", "Formula", "State"]
+): Component => {
+    // >> extract component
+    const componentData: Record<string, any> = {}
+
+    // iterate over component key parts and find matching records
+    for (const part of componentKeyParts) {
+        const partNormalized = String(part).toLowerCase();
+        const record = data.find(r =>
+            String(r.name).toLowerCase() === partNormalized
+        );
+
+        // >> check
+        if (!record) {
+            throw new Error(`Missing '${part}' record in data for component extraction.`);
+        }
+
+        componentData[part] = record.value;
+    }
+
+    // NOTE: build component
+    const component: Component = {
+        name: String(componentData["Name"] || ""),
+        formula: String(componentData["Formula"] || ""),
+        state: String(componentData["State"] || "") as Component["state"],
+        mole_fraction: 0
+    }
+
+    // res
+    return component;
+}
+
+/**
+ * Extracts unique mixture property symbols and units from a raw thermo record set based on a specified identifier pattern (e.g. "_i_j").
+ * @param data - the raw thermo records to analyze
+ * @param propIdentifier - the substring used to identify mixture property symbols (default: "_i_j")
+ * @returns an array of unique symbols and their corresponding units for mixture properties found in the data
+ */
+export const getMixtureProps = (
+    data: RawThermoRecord[],
+    propIdentifier: string
+): { symbol: string, unit: string }[] => {
+    const uniqueBySymbol = new Map<string, { symbol: string, unit: string }>();
+
+    data
+        .filter(record =>
+            typeof record.symbol === "string" &&
+            record.symbol.includes(propIdentifier)
+        )
+        .map(record => {
+            const sym = String(record.symbol);
+            const prefix = sym.split(propIdentifier)[0]; // "a_i_j_1" → "a"
+            return {
+                symbol: prefix,
+                unit: String(record.unit),
+            }
+        })
+        .forEach(item => {
+            if (!uniqueBySymbol.has(item.symbol)) {
+                uniqueBySymbol.set(item.symbol, item);
+            }
+        });
+
+    return Array.from(uniqueBySymbol.values());
+};
+

@@ -48,7 +48,7 @@
     "pack:make": "npm pack"
   },
   "dependencies": {
-    "mozithermodb-settings": "^1.0.0"
+    "mozithermodb-settings": "^1.1.0"
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^15.3.0",
