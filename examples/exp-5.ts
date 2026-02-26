@@ -40,8 +40,8 @@ const methanolEthanolRecords: RawThermoRecord[] = [
     { name: "a_i_j_2", symbol: "a_i_j_2", value: 1, unit: "1" },
     { name: "b_i_j_1", symbol: "b_i_j_1", value: 2, unit: "1" },
     { name: "b_i_j_2", symbol: "b_i_j_2", value: 3, unit: "1" },
-    { name: "c_i_j_1", symbol: "c_i_j_1", value: 0, unit: "1" },
-    { name: "c_i_j_2", symbol: "c_i_j_2", value: 4, unit: "1" },
+    { name: "c_i_j_1", symbol: "c_i_j_1", value: 4, unit: "1" },
+    { name: "c_i_j_2", symbol: "c_i_j_2", value: 5, unit: "1" },
     { name: "alpha_i_j_1", symbol: "alpha_i_j_1", value: 5, unit: "1" },
     { name: "alpha_i_j_2", symbol: "alpha_i_j_2", value: 6, unit: "1" }
 ]
@@ -51,12 +51,12 @@ const ethanolMethanolRecords: RawThermoRecord[] = [
     { name: "Name", symbol: "-", value: "Ethanol", unit: "N/A" },
     { name: "Formula", symbol: "-", value: "C2H5OH", unit: "N/A" },
     { name: "State", symbol: "-", value: "l", unit: "N/A" },
-    { name: "a_i_j_1", symbol: "a_i_j_1", value: 0, unit: "1" },
-    { name: "a_i_j_2", symbol: "a_i_j_2", value: 1, unit: "1" },
-    { name: "b_i_j_1", symbol: "b_i_j_1", value: 2, unit: "1" },
-    { name: "b_i_j_2", symbol: "b_i_j_2", value: 3, unit: "1" },
-    { name: "c_i_j_1", symbol: "c_i_j_1", value: 4, unit: "1" },
-    { name: "c_i_j_2", symbol: "c_i_j_2", value: 5, unit: "1" },
+    { name: "a_i_j_1", symbol: "a_i_j_1", value: 10, unit: "1" },
+    { name: "a_i_j_2", symbol: "a_i_j_2", value: 11, unit: "1" },
+    { name: "b_i_j_1", symbol: "b_i_j_1", value: 12, unit: "1" },
+    { name: "b_i_j_2", symbol: "b_i_j_2", value: 13, unit: "1" },
+    { name: "c_i_j_1", symbol: "c_i_j_1", value: 14, unit: "1" },
+    { name: "c_i_j_2", symbol: "c_i_j_2", value: 15, unit: "1" },
     { name: "alpha_i_j_1", symbol: "alpha_i_j_1", value: 6, unit: "1" },
     { name: "alpha_i_j_2", symbol: "alpha_i_j_2", value: 7, unit: "1" }
 ]
@@ -65,3 +65,72 @@ const matrixData: RawThermoRecord[][] = [methanolEthanolRecords, ethanolMethanol
 
 // SECTION: build matrix data
 const moziMatrixData = new MoziMatrixData(matrixData, "Name-Formula", "Matrix Data", "Thermodynamic matrix data for methanol-ethanol mixture");
+
+// NOTE: get property for a component
+const res1 = moziMatrixData.getProperty(
+    "a_i_j",
+    methanol,
+    "methanol|ethanol",
+);
+console.log(res1)
+
+const res2 = moziMatrixData.getProperty(
+    "a_i_j",
+    ethanol,
+    "methanol|ethanol",
+);
+console.log(res2)
+
+// SECTION: get matrix property
+const res3 = moziMatrixData.getMatrixProperty(
+    "a_i_j", [methanol, ethanol], "methanol|ethanol"
+)
+console.log(res3)
+
+const res4 = moziMatrixData.getMatrixProperty(
+    "a_i_j", [methanol, methanol], "methanol|ethanol"
+)
+console.log(res4)
+
+const res5 = moziMatrixData.getMatrixProperty(
+    "a_i_j", [ethanol, methanol], "methanol|ethanol"
+)
+console.log(res5)
+
+const res6 = moziMatrixData.getMatrixProperty(
+    "a_i_j", [ethanol, ethanol], "methanol|ethanol"
+)
+console.log(res6)
+
+// SECTION: get matrix property by symbol
+const res7 = moziMatrixData.ij(
+    "a_1_1", "methanol|ethanol"
+)
+console.log(res7)
+
+const res8 = moziMatrixData.ij(
+    "a_1_2", "methanol|ethanol"
+)
+console.log(res8)
+
+const res9 = moziMatrixData.ij(
+    "a_2_1", "methanol|ethanol"
+)
+console.log(res9)
+
+const res10 = moziMatrixData.ij(
+    "a_2_2", "methanol|ethanol"
+)
+console.log(res10)
+
+// SECTION: ijs
+const res11 = moziMatrixData.ijs(
+    "a | methanol | ethanol"
+)
+console.log(res11)
+
+// SECTION: mat
+const res12 = moziMatrixData.mat(
+    "a | methanol | ethanol"
+)
+console.log(res12)
