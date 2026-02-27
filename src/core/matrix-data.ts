@@ -81,6 +81,9 @@ export class MoziMatrixData {
     // mixture names
     mixtureKeys: string[] = [];
 
+    // original mixture id for the components in the mixture
+    _componentsMixtureId: string | null = null;
+
     // SECTION: constructor
     constructor(
         public data: RawThermoRecord[][],
@@ -102,6 +105,15 @@ export class MoziMatrixData {
 
         // NOTE: build property matrices for each mixture
         this.mixturePropertyMatrices = this.buildAllMixturePropertyMatrices();
+    }
+
+    // SECTION: get/set mixture id for components
+    get componentsMixtureId(): string | null {
+        return this._componentsMixtureId;
+    }
+
+    set componentsMixtureId(mixtureId: string) {
+        this._componentsMixtureId = mixtureId;
     }
 
     // SECTION: Retrieve original raw thermo records (mixed string/number values)

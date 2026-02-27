@@ -44,6 +44,7 @@ export const buildBinaryMixtureData = (
     if (components.length !== 2) {
         throw new Error(`Expected exactly 2 components for binary mixture data, but got ${components.length}`);
     }
+    // SECTION: Collect component data relevant for the mixture
 
     // SECTION: Build the matrix data
     // NOTE: create MoziMatrixData instance
@@ -52,6 +53,10 @@ export const buildBinaryMixtureData = (
     // NOTE: find the mixture id for these components (handles both A|B and B|A)
     const mixtureId: string = moziMatrixData.getMixtureIdForComponents(components);
 
+    // >> set the mixture id for the components
+    moziMatrixData.componentsMixtureId = mixtureId;
+
+    // NOTE: get the property symbols available for this mixture
     // available properties
     const properties = moziMatrixData.getMixturePropertySymbols(mixtureId);
 

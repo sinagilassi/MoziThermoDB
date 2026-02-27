@@ -68,7 +68,7 @@ const binaryMixtureData = buildBinaryMixtureData(
     mixture,
     matrixData,
 );
-
+// >> log
 console.log(binaryMixtureData)
 
 // NOTE: property symbol "a"

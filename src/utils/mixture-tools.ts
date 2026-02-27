@@ -1,5 +1,7 @@
 // import libs
-import { BinaryMixtureKey, type Component, type ComponentKey, set_component_id } from "mozithermodb-settings";
+import { type BinaryMixtureKey, type Component, type ComponentKey, set_component_id } from "mozithermodb-settings";
+// ! LOCALS
+import type { RawThermoRecord } from "@/types";
 
 /**
  * Generates a unique mixture ID based on the component IDs and a specified delimiter.
@@ -126,4 +128,23 @@ export const findMixtureDelimiter = (
         }
     }
     throw new Error(`Failed to find mixture delimiter in mixture ID '${mixtureId}'.`);
+}
+
+// SECTION: extract binary mixture data for a pair of components
+/**
+ * Extracts binary mixture data for a pair of components from raw thermo records.
+ * @param components Array of two components for which to extract mixture data.
+ * @param data Array of raw thermo records containing mixture data for multiple component pairs.
+ * @param mixtureKeys Array of mixture keys to use for identifying the mixture (e.g. ["Name", "Formula", "Name-Formula"]).
+ * @param mixtureDelimiters Array of delimiters to use for separating component IDs in the mixture ID (e.g. ["|", " | "]).
+ * @returns Extracted binary mixture data for the specified components, mixture id, mixture keys, and delimiters.
+ * @throws Error if mixture data cannot be found for the specified components.
+ */
+export const extractBinaryMixtureData = (
+    components: Component[],
+    data: RawThermoRecord[][],
+    mixtureKeys: BinaryMixtureKey[] = ["Name", "Formula", "Name-Formula"],
+    mixtureDelimiters: string[] = ["|", " | "]
+): any {
+
 }
