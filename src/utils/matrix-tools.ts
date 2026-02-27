@@ -74,6 +74,11 @@ export const propertyParser = (
     // Case: property prefix with external components (e.g. "a | comp1 | comp2")
     if (delimiters.indexOf(mainDelimiter) === 0 && delimiters.length > 1) {
         res.propertyPrefix = propertyPart;
+        res.i = parts[1] || "";
+        res.j = parts[2] || "";
+        if (res.i && res.j) {
+            res.mode = !isNaN(Number(res.i)) && !isNaN(Number(res.j)) ? "numeric" : "component";
+        }
         return res;
     }
 
@@ -106,7 +111,7 @@ export const generateMixturePropertyKey = (
     i: Component,
     j: Component,
     componentKey: ComponentKey,
-    propertyDelimiter = "_"
+    propertyDelimiter = "_",
 ): string => {
     try {
         // NOTE: component ids

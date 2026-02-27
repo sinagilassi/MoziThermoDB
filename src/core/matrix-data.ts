@@ -1,5 +1,13 @@
 // import libs
-import { type Component, ComponentKey, BinaryMixtureKey, set_component_id, CustomProperty, create_binary_mixture_id } from 'mozithermodb-settings';
+import {
+    type Component,
+    type CustomProperty,
+    type ComponentKey,
+    type BinaryMixtureKey,
+    set_component_id,
+    create_binary_mixture_id,
+    infer_binary_mixture_key
+} from 'mozithermodb-settings';
 // ! LOCALS
 import {
     RawThermoRecord,
@@ -7,7 +15,19 @@ import {
     MixtureRawThermoData,
     MixtureComponentsRawThermoData
 } from '@/types';
-import { cleanRawThermoRecord, getMixtureComponents, getMixtureProps, propertyParser, generateMixturePropertyKey } from '@/utils';
+import {
+    cleanRawThermoRecord,
+    getMixtureComponents,
+    getMixtureProps,
+    propertyParser,
+    generateMixturePropertyKey,
+    generateMixtureId,
+    generateMixtureIds,
+    findMixtureComponent,
+    generateMixtureKey,
+    findMixtureKey,
+    findMixtureKeyFromComponents
+} from '@/utils';
 
 // SECTION: Types & Interfaces
 type Props = {
@@ -15,13 +35,14 @@ type Props = {
     unit: string;
 }
 
-type ThermoMatrixRecordMap = {
+export type ThermoMatrixRecordMap = {
     [mixture: string]: {
+        mixtureKey: BinaryMixtureKey | null;
         mixtureIds: string[];
         mixtureComponentIds: string[];
         components: Component[];
-        records: { [componentId: string]: RawThermoRecord[] }; // e.g. "Name-Formula" -> RawThermoRecord[]
-        props: Props[]; // list of available property symbols for this mixture with units
+        records: { [componentId: string]: RawThermoRecord[] };
+        props: Props[];
     };
 }
 
@@ -58,13 +79,11 @@ export class MoziMatrixData {
     createdAt: Date = new Date();
 
     // mixture names
-    mixtureIds: string[] = [];
+    mixtureKeys: string[] = [];
 
     // SECTION: constructor
     constructor(
         public data: RawThermoRecord[][],
-        public mixtureKey: BinaryMixtureKey = "Name-Formula",
-        public componentKey: ComponentKey = "Name-Formula",
         name?: string,
         description?: string
     ) {
@@ -78,8 +97,8 @@ export class MoziMatrixData {
         // NOTE: normalize mixture data
         this.matrixData = this.normalizeMixture();
 
-        // NOTE: get mixture ids (component name || component name)
-        this.mixtureIds = this.matrixData ? Object.keys(this.matrixData) : [];
+        // NOTE: get mixture keys (component name || component name)
+        this.mixtureKeys = this.matrixData ? Object.keys(this.matrixData) : [];
 
         // NOTE: build property matrices for each mixture
         this.mixturePropertyMatrices = this.buildAllMixturePropertyMatrices();
@@ -114,22 +133,36 @@ export class MoziMatrixData {
 
     // SECTION: get component index for mixture
     getComponentIndex(mixtureName: string): { [componentId: string]: number } {
-        // NOTE: components
-        const components: Component[] = this.matrixData[mixtureName].components;
-        const componentNames = components.map(c => c.name);
-        const componentFormulas = components.map(c => c.formula);
-        const componentIds = components.map(component => set_component_id(component, this.componentKey));
-
         // NOTE: mixture ids
         const mixtureComponentIds = this.matrixData[mixtureName].mixtureComponentIds;
+        // >> mixture key
+        const mixtureKey = this.matrixData[mixtureName].mixtureKey as BinaryMixtureKey;
+
+        // NOTE: components
+        const components: Component[] = this.matrixData[mixtureName].components;
+        // >> names
+        const componentNames = components.map(c => c.name);
+        // >> formulas
+        const componentFormulas = components.map(c => c.formula);
+        // >> states
+        const componentStates = components.map(c => c.state);
+
+        // NOTE: component ids
+        // ! mixture key is used
+        const componentIds = components.map(component => set_component_id(component, mixtureKey));
 
         // res
         const res: { [componentId: string]: number } = {};
 
+        // NOTE: find component index (Reference mixture name)
         // iterate over mixture ids
         mixtureComponentIds.forEach((id, index) => {
             // find component index by matching id to component name or formula
-            const componentIndex = componentIds.findIndex(componentId => componentId.toLowerCase() === id.toLowerCase() || componentNames[componentIds.indexOf(componentId)].toLowerCase() === id.toLowerCase() || componentFormulas[componentIds.indexOf(componentId)].toLowerCase() === id.toLowerCase());
+            const componentIndex = componentIds.findIndex(
+                componentId => componentId.toLowerCase() === id.toLowerCase() ||
+                    componentNames[componentIds.indexOf(componentId)].toLowerCase() === id.toLowerCase() ||
+                    componentFormulas[componentIds.indexOf(componentId)].toLowerCase() === id.toLowerCase()
+            );
 
             // if component index found, add to res
             if (componentIndex !== -1) {
@@ -192,13 +225,24 @@ export class MoziMatrixData {
         // initialize matrix data
         mixtureNames.forEach(mixture => {
             // ! mixture component ids (e.g. "methanol|ethanol" → ["methanol", "ethanol"])
-            const mixtureComponentIds = mixture.split(this.mixtureDelimiter).map(name => name.trim());
+            // set component order, component indices
+            const mixtureComponentIds = mixture.split(this.mixtureDelimiter).map(id => id.trim());
 
             // ! mixture ids
-            const mixtureId1 = mixtureComponentIds[0] + this.mixtureDelimiter + mixtureComponentIds[1]; // e.g. "methanol|ethanol"
-            const mixtureId2 = mixtureComponentIds[1] + this.mixtureDelimiter + mixtureComponentIds[0]; // e.g. "ethanol|methanol"
+            const mixtureId1 = generateMixtureId(
+                mixtureComponentIds[0],
+                mixtureComponentIds[1],
+                this.mixtureDelimiter
+            )
+            const mixtureId2 = generateMixtureId(
+                mixtureComponentIds[1],
+                mixtureComponentIds[0],
+                this.mixtureDelimiter
+            )
 
+            // ! initialize mixture data in res
             res[mixture] = {
+                mixtureKey: null,
                 mixtureIds: [mixtureId1, mixtureId2],
                 mixtureComponentIds,
                 components: [],
@@ -207,6 +251,7 @@ export class MoziMatrixData {
             };
         });
 
+        // NOTE: extract data
         // iterate over raw thermo records and populate mixture components map and mixture records map
         this.rawThermoRecord.forEach(record => {
             // loop over records
@@ -231,6 +276,14 @@ export class MoziMatrixData {
                 mole_fraction: 0
             };
 
+            // ! find mixture key for this component
+            const mixtureKey_ = findMixtureKey(
+                String(mixtureNameRecord.value),
+                component,
+                ["Name", "Formula", "Name-Formula"],
+                this.mixtureDelimiter
+            );
+
             // add component to mixture components map
             res[mixtureNameRecord.value as string].components.push(component);
 
@@ -238,12 +291,24 @@ export class MoziMatrixData {
             const componentRawRecords = cleanRawThermoRecord(record)
 
             // add raw thermo records to mixture records map under component key
-            const componentId = set_component_id(component, this.componentKey);
+            const componentId = set_component_id(component, mixtureKey_);
             res[mixtureNameRecord.value as string].records[componentId] = componentRawRecords;
 
             // ! get properties for this mixture
             const props = getMixtureProps(record, this.propIdentifier);
             res[mixtureNameRecord.value as string].props = props;
+        });
+
+
+        // NOTE: extract mixture keys
+        Object.entries(res).forEach(([mixtureName, mixtureData]) => {
+            const mixtureKey = findMixtureKeyFromComponents(
+                mixtureName,
+                mixtureData.components,
+                ["Name", "Formula", "Name-Formula"],
+            )
+
+            res[mixtureName].mixtureKey = mixtureKey;
         });
 
         // res
@@ -317,8 +382,8 @@ export class MoziMatrixData {
         const res: MixturePropData = {};
 
         // iterate over mixtures and build property matrices for each mixture
-        this.mixtureIds.forEach(mixtureId => {
-            res[mixtureId] = this.buildAllPropertyMatrices(mixtureId);
+        this.mixtureKeys.forEach(mixtureKey => {
+            res[mixtureKey] = this.buildAllPropertyMatrices(mixtureKey);
         });
 
         return res;
@@ -349,8 +414,11 @@ export class MoziMatrixData {
         // NOTE: get mixture data
         const propData = this.getPropertyMatrix(mixtureId, propPrefix);
 
+        // NOTE: get mixture key
+        const mixtureKey = this.matrixData[mixtureId].mixtureKey as BinaryMixtureKey;
+
         // NOTE: find component index in mixture
-        const componentIndex = this.getComponentIndex(mixtureId)[set_component_id(component, this.componentKey)];
+        const componentIndex = this.getComponentIndex(mixtureId)[set_component_id(component, mixtureKey)];
 
         if (componentIndex === undefined) {
             throw new Error(`Component '${component.name}' not found in mixture '${mixtureId}'.`);
@@ -367,12 +435,12 @@ export class MoziMatrixData {
         propertySymbol: string,
         components: Component[],
         mixtureId: string,
+        componentKey: ComponentKey = "Name-Formula",
+        keyDelimiter: string = "_",
     ): CustomProperty {
         // NOTE: property symbol format: "prop_i_j" where i and j are component indices in the mixture
         const {
             propertyPrefix: propPrefix,
-            propertyDelimiter,
-            mode
         } = propertyParser(
             propertySymbol,
         )
@@ -391,9 +459,12 @@ export class MoziMatrixData {
             return this.getComponentIndex(mixtureId);
         });
 
+        // NOTE: get mixture key
+        const mixtureKey = this.matrixData[mixtureId].mixtureKey as BinaryMixtureKey;
+
         // NOTE: component i and component j indices
-        const i = Number(componentIndices[0][set_component_id(component_i, this.componentKey)]);
-        const j = Number(componentIndices[1][set_component_id(component_j, this.componentKey)]);
+        const i = Number(componentIndices[0][set_component_id(component_i, mixtureKey)]);
+        const j = Number(componentIndices[1][set_component_id(component_j, mixtureKey)]);
 
         // NOTE: extract property value for this pair of components from the property matrix
         const propValue = propData[i][j];
@@ -403,8 +474,8 @@ export class MoziMatrixData {
             propPrefix,
             component_i,
             component_j,
-            this.componentKey,
-            propertyDelimiter
+            componentKey,
+            keyDelimiter
         );
 
         const customProp: CustomProperty = {
@@ -420,16 +491,23 @@ export class MoziMatrixData {
     ij(
         propertySymbol: string,
         mixtureId: string,
+        componentKey: ComponentKey = "Name-Formula",
+        keyDelimiter: string = "_"
     ): CustomProperty {
         // NOTE: property symbol format: "prop_i_j" where i and j are component indices in the mixture
-        const propPrefix = this.getPropertyPrefix(propertySymbol); // e.g. "a_i_j" → "a"
-        // >> get property i and j placeholders (e.g. "i" and "j" for "a_i_j")
-        const ph = this.getPropertyPlaceholders(propertySymbol); // e.g. ["i", "j"]
-        const placeholders = ph.ids;
-        const mode = ph.mode;
+        const {
+            propertyPrefix: propPrefix,
+            propertyDelimiter,
+            i,
+            j,
+            mode
+        } = propertyParser(propertySymbol);
+
+        // >> place holders
+        const placeholders = [i, j];
 
         // NOTE: components
-        const components = this.matrixData[mixtureId].components;
+        const mixtureComponents = this.matrixData[mixtureId].components;
 
         // component set for this property
         const componentsSet: Component[] = [];
@@ -437,25 +515,29 @@ export class MoziMatrixData {
         // component orders for this property
         if (mode === "numeric") {
             // component i
-            const component_i = components[Number(placeholders[0]) - 1]; // e.g. "i" → component at index 0
+            const component_i = mixtureComponents[Number(placeholders[0]) - 1]; // e.g. "i" → component at index 0
             // component j
-            const component_j = components[Number(placeholders[1]) - 1]; // e.g. "j" → component at index 1
+            const component_j = mixtureComponents[Number(placeholders[1]) - 1]; // e.g. "j" → component at index 1
 
             if (!component_i || !component_j) {
                 throw new Error(`Components with indices '${placeholders[0]}' and '${placeholders[1]}' not found in mixture '${mixtureId}' for property '${propertySymbol}'.`);
             }
             componentsSet.push(component_i, component_j);
-        } else if (mode === "alphanumeric") {
+        } else if (mode === "component") {
             // component i
-            const component_i = components.find(
-                c => c.name.toLowerCase() === placeholders[0].toLowerCase() ||
-                    c.formula.toLowerCase() === placeholders[0].toLowerCase()
-            );
+            const component_i = findMixtureComponent(
+                placeholders[0],
+                mixtureComponents,
+                ["Name", "Formula", "Name-Formula"] as ComponentKey[],
+            )
             // component j
-            const component_j = components.find(
-                c => c.name.toLowerCase() === placeholders[1].toLowerCase() ||
-                    c.formula.toLowerCase() === placeholders[1].toLowerCase()
-            );
+            const component_j = findMixtureComponent(
+                placeholders[1],
+                mixtureComponents,
+                ["Name", "Formula", "Name-Formula"] as ComponentKey[],
+            )
+
+            // >> check if components found
             if (!component_i || !component_j) {
                 throw new Error(`Components with ids '${placeholders[0]}' and '${placeholders[1]}' not found in mixture '${mixtureId}' for property '${propertySymbol}'.`);
             }
@@ -466,7 +548,13 @@ export class MoziMatrixData {
         }
 
         // NOTE: get property value for this pair of components from the property matrix
-        const propValue = this.getMatrixProperty(propertySymbol, componentsSet, mixtureId);
+        const propValue = this.getMatrixProperty(
+            propertySymbol,
+            componentsSet,
+            mixtureId,
+            componentKey,
+            keyDelimiter
+        );
 
         return propValue;
     }
@@ -481,20 +569,55 @@ export class MoziMatrixData {
         const mixtureName1 = componentNames.join(this.mixtureDelimiter); // e.g. ["methanol", "ethanol"] → "methanol|ethanol"
         const mixtureName2 = [...componentNames].reverse().join(this.mixtureDelimiter); // e.g. ["ethanol", "methanol"] → "ethanol|methanol"
 
-        // find mixture id that matches these components
-        for (const id of this.mixtureIds) {
-            if (id === mixtureName1 || id === mixtureName2) {
-                return id;
+        // NOTE: find mixture id that matches these components
+        let res: { mixture: string, mixtureId: string } | null = null;
+
+        // iterate over matrix data
+        for (const [mixtureName, mixtureData] of Object.entries(this.matrixData)) {
+
+            if (mixtureData.mixtureIds.includes(mixtureName1)) {
+                res = { mixture: mixtureName, mixtureId: mixtureName1 };
+                break;
+            }
+
+            if (mixtureData.mixtureIds.includes(mixtureName2)) {
+                res = { mixture: mixtureName, mixtureId: mixtureName2 };
+                break;
             }
         }
 
-        throw new Error(`No mixture found for components '${componentNames.join(", ")}'.`);
+        if (!res) {
+            throw new Error(`No mixture found for components '${componentNames.join(", ")}'.`);
+        }
+        return res.mixture;
+    }
+
+    // SECTION: Find mixture key
+    findMixtureKey(mixtureIds: string[]): string {
+        if (!mixtureIds || mixtureIds.length === 0) {
+            throw new Error("Mixture IDs array is empty!");
+        }
+
+        const normalizedMixtureIds = mixtureIds.map(id => id.trim().toLowerCase());
+
+        // iterate over mixture keys
+        for (const mixtureKey of this.mixtureKeys) {
+            const mixtureData = this.matrixData[mixtureKey];
+
+            if (mixtureData.mixtureIds.some(id => normalizedMixtureIds.includes(id.trim().toLowerCase()))) {
+                return mixtureKey;
+            }
+        }
+
+        throw new Error(`No mixture key found for mixture IDs '${mixtureIds.join(", ")}'.`);
     }
 
     // SECTION: Get all matrix properties for a given property symbol (e.g. "a_i_j | component1 | component2" or "a | component1 | component2") for all pairs of components in a mixture
     ijs(
         propertySymbol: string,
-    ): { [componentPair: string]: CustomProperty } {
+        componentKey: ComponentKey = "Name-Formula",
+        keyDelimiter: string = "_"
+    ): { [componentPair: string]: number } {
         // NOTE: extract property symbol
         const {
             propertyPrefix: propPrefix,
@@ -507,16 +630,19 @@ export class MoziMatrixData {
         )
 
         // NOTE: components
-        const componentNames = propertySymbol.split(propDelimiter).slice(1).map(s => s.trim()); // e.g. "a_i_j | methanol | ethanol" → ["methanol", "ethanol"]
+        const componentNames = [i, j];
 
         // find mixture id that matches these components (handles both A|B and B|A)
         const mixtureId = this.findMixtureId(componentNames);
+
+        // NOTE: get mixture key
+        const mixtureKey = this.matrixData[mixtureId].mixtureKey as BinaryMixtureKey;
 
         // NOTE: get mixture components
         const components = this.matrixData[mixtureId].components;
 
         // res
-        const res: { [componentPair: string]: CustomProperty } = {};
+        const res: { [componentPair: string]: number } = {};
 
         // iterate over all pairs of components in the mixture
         for (let i = 0; i < components.length; i++) {
@@ -526,11 +652,29 @@ export class MoziMatrixData {
                 const component_j = components[j];
 
                 // component pair key for res
-                const componentPairKey = `${component_i.name}-${component_i.formula} | ${component_j.name}-${component_j.formula}`; // e.g. "methanol-CH3OH | ethanol-C2H5OH"
-                // get property value for this pair of components from the property matrix
-                const propValue = this.getMatrixProperty(propertySymbol, [component_i, component_j], mixtureId);
+                // *** component i
+                const component_i_id = set_component_id(component_i, mixtureKey);
+                // *** component j
+                const component_j_id = set_component_id(component_j, mixtureKey);
 
-                res[componentPairKey] = propValue;
+
+                // property symbol for this pair of components (e.g. "a_methanol_ethanol" or "a_1_2")
+                const propSymbolPair = `${propPrefix}${keyDelimiter}${component_i_id}${keyDelimiter}${component_j_id}`;
+
+                // get property value for this pair of components from the property matrix
+                const propValue = this.ij(
+                    propSymbolPair,
+                    mixtureId,
+                    componentKey,
+                    keyDelimiter
+                )
+
+                // *** create component pair key
+                const componentPair_i_id = set_component_id(component_i, componentKey);
+                const componentPair_j_id = set_component_id(component_j, componentKey);
+                const componentPairKey = `${componentPair_i_id}${keyDelimiter}${componentPair_j_id}`;
+
+                res[componentPairKey] = propValue['value'];
             }
         }
 
@@ -553,6 +697,8 @@ export class MoziMatrixData {
     private _buildMatrixData(
         propertySymbol: string,
         components: Component[],
+        componentKey: ComponentKey,
+        keyDelimiter: string
     ): { numeric: number[][], alphabetic: { [key: string]: number } } {
         try {
             // NOTE: check property symbol
@@ -566,20 +712,28 @@ export class MoziMatrixData {
             }
 
             // NOTE: parse property symbol to get prefix
-            const propPrefix = this.getPropertyPrefix(propertySymbol); // e.g. "Alpha_i_j" → "Alpha"
+            const {
+                propertyPrefix: propPrefix,
+                propertyDelimiter,
+            } = propertyParser(
+                propertySymbol,
+            )
 
-            // NOTE: construct mixture id from components and find the actual stored mixture id
-            const componentNames = components.map(c => c.name);
-            const mixtureId = this.findMixtureId(componentNames);
+            // NOTE: create mixture id
+            const mixtureKeys = generateMixtureKey(
+                components,
+                ["Name", "Formula", "Name-Formula"],
+                this.mixtureDelimiter
+            )
+
+            // >> find mixture key
+            const mixtureId = this.findMixtureKey(mixtureKeys);
+
+            // NOTE: get mixture key
+            const mixtureKey = this.matrixData[mixtureId].mixtureKey as BinaryMixtureKey;
 
             // NOTE: get component count
             const componentNum = components.length;
-
-            // NOTE: get property matrix data for this mixture
-            const propMatrix = this.getPropertyMatrix(mixtureId, propPrefix);
-
-            // NOTE: get component indices for this mixture
-            const componentIndices = this.getComponentIndex(mixtureId);
 
             // NOTE: matrix data (2D array initialized)
             const matIj: number[][] = Array(componentNum)
@@ -596,22 +750,28 @@ export class MoziMatrixData {
                     const component_j = components[j];
 
                     // get component ids using the componentKey
-                    const componentId_i = set_component_id(component_i, this.componentKey);
-                    const componentId_j = set_component_id(component_j, this.componentKey);
+                    const componentId_i = set_component_id(component_i, mixtureKey);
+                    const componentId_j = set_component_id(component_j, mixtureKey);
 
-                    // get indices in the property matrix
-                    const rowIndex = componentIndices[componentId_i];
-                    const colIndex = componentIndices[componentId_j];
+                    // create property symbol for this pair of components (e.g. "a_methanol_ethanol" or "a_1_2")
+                    const propSymbolPair = `${propPrefix}${propertyDelimiter}${componentId_i}${propertyDelimiter}${componentId_j}`;
 
                     // get value from property matrix
-                    const value = propMatrix[rowIndex][colIndex];
+                    const propMatrix = this.ij(
+                        propSymbolPair,
+                        mixtureId
+                    )
 
                     // set value in numeric matrix
-                    matIj[i][j] = value;
+                    matIj[i][j] = propMatrix['value'] ?? 0;
 
                     // set value in dictionary with pipe-separated key
-                    const keyDict = `${component_i.name} | ${component_j.name}`;
-                    matIjDict[keyDict] = value ?? 0;
+                    // *** create component pair key
+                    const componentPair_i_id = set_component_id(component_i, componentKey);
+                    const componentPair_j_id = set_component_id(component_j, componentKey);
+                    const componentPairKey = `${componentPair_i_id}${keyDelimiter}${componentPair_j_id}`;
+
+                    matIjDict[componentPairKey] = propMatrix['value'] ?? 0;
                 }
             }
 
@@ -646,8 +806,10 @@ export class MoziMatrixData {
     mat(
         propertySymbol: string,
         components: Component[],
+        componentKey: ComponentKey = "Name-Formula",
+        keyDelimiter: string = "_"
     ): number[][] {
-        const result = this._buildMatrixData(propertySymbol, components);
+        const result = this._buildMatrixData(propertySymbol, components, componentKey, keyDelimiter);
         return result.numeric;
     }
 
@@ -668,8 +830,10 @@ export class MoziMatrixData {
     matDict(
         propertySymbol: string,
         components: Component[],
+        componentKey: ComponentKey = "Name-Formula",
+        keyDelimiter: string = "_"
     ): { [key: string]: number } {
-        const result = this._buildMatrixData(propertySymbol, components);
+        const result = this._buildMatrixData(propertySymbol, components, componentKey, keyDelimiter);
         return result.alphabetic;
     }
 }
