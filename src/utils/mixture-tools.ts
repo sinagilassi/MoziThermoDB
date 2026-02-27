@@ -112,3 +112,18 @@ export const findMixtureKeyFromComponents = (
     throw new Error(`Failed to find mixture key for mixture ID '${mixtureId}' and components '${components.map(c => c.name).join(", ")}'.`);
 
 }
+
+// SECTION: Find mixture delimiter from mixture ID
+export const findMixtureDelimiter = (
+    mixtureId: string,
+    mixtureDelimiters: string[]
+): string => {
+    // Sort by length (longest first) to avoid substring matches
+    const sorted = [...mixtureDelimiters].sort((a, b) => b.length - a.length);
+    for (const delimiter of sorted) {
+        if (mixtureId.includes(delimiter)) {
+            return delimiter;
+        }
+    }
+    throw new Error(`Failed to find mixture delimiter in mixture ID '${mixtureId}'.`);
+}
