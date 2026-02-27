@@ -2,7 +2,7 @@
 import { type Component, ComponentKey, ComponentSchema } from "mozithermodb-settings"
 // ! LOCALS
 import type { RawThermoRecord } from "../src/types";
-import { MoziMatrixData, buildBinaryMixtureData } from './../src';
+import { buildBinaryMixtureData, MoziMatrixData } from './../src';
 
 
 // NOTE: components
@@ -71,24 +71,20 @@ const binaryMixtureData = buildBinaryMixtureData(
 
 console.log(binaryMixtureData)
 
+// NOTE: property symbol "a"
+const aSrc: MoziMatrixData = binaryMixtureData["methanol|ethanol"]["a"];
+console.log("Property 'a' for methanol|ethanol:", aSrc)
 
-
-// SECTION: build matrix data
-const moziMatrixData = new MoziMatrixData(
-    matrixData,
-    "Matrix Data",
-    "Thermodynamic matrix data for methanol-ethanol mixture"
-);
 
 // SECTION: get property for a component pair
-const res1 = moziMatrixData.getProperty(
+const res1 = aSrc.getProperty(
     "a_i_j",
     methanol,
     "methanol|ethanol",
 );
 console.log(res1)
 
-const res2 = moziMatrixData.getProperty(
+const res2 = aSrc.getProperty(
     "a_i_j",
     ethanol,
     "methanol|ethanol",
@@ -96,57 +92,57 @@ const res2 = moziMatrixData.getProperty(
 console.log(res2)
 
 // SECTION: get matrix property
-const res3 = moziMatrixData.getMatrixProperty(
+const res3 = aSrc.getMatrixProperty(
     "a_i_j", [methanol, ethanol], "methanol|ethanol"
 )
 console.log(res3)
 
-const res4 = moziMatrixData.getMatrixProperty(
+const res4 = aSrc.getMatrixProperty(
     "a_i_j", [methanol, methanol], "methanol|ethanol"
 )
 console.log(res4)
 
-const res5 = moziMatrixData.getMatrixProperty(
+const res5 = aSrc.getMatrixProperty(
     "a_i_j", [ethanol, methanol], "methanol|ethanol"
 )
 console.log(res5)
 
-const res6 = moziMatrixData.getMatrixProperty(
+const res6 = aSrc.getMatrixProperty(
     "a_i_j", [ethanol, ethanol], "methanol|ethanol"
 )
 console.log(res6)
 
 // SECTION: get matrix property by symbol
-const res7 = moziMatrixData.ij(
+const res7 = aSrc.ij(
     "a_1_1", "methanol|ethanol"
 )
 console.log(res7)
 
-const res8 = moziMatrixData.ij(
+const res8 = aSrc.ij(
     "a_1_2", "methanol|ethanol"
 )
 console.log(res8)
 
-const res9 = moziMatrixData.ij(
+const res9 = aSrc.ij(
     "a_2_1", "methanol|ethanol"
 )
 console.log(res9)
 
-const res10 = moziMatrixData.ij(
+const res10 = aSrc.ij(
     "a_2_2",
     "methanol|ethanol",
     "Formula"
 )
 console.log(res10)
 
-const res10_1 = moziMatrixData.ij(
+const res10_1 = aSrc.ij(
     "a_ethanol_ethanol",
     "methanol|ethanol",
     "Name"
 )
 console.log(res10_1)
 
-const res10_2 = moziMatrixData.ij(
+const res10_2 = aSrc.ij(
     "a_ethanol_ethanol",
     "methanol|ethanol",
     "Name-Formula"
@@ -155,19 +151,19 @@ console.log(res10_2)
 
 // SECTION: ijs
 console.log("SECTION: ijs")
-const res11 = moziMatrixData.ijs(
+const res11 = aSrc.ijs(
     "a | methanol | ethanol",
     "Name"
 )
 console.log(res11)
 
-const res12 = moziMatrixData.ijs(
+const res12 = aSrc.ijs(
     "a_methanol_ethanol",
     "Formula"
 )
 console.log(res12)
 
-const res13 = moziMatrixData.ijs(
+const res13 = aSrc.ijs(
     "a_ethanol_methanol",
     "Name-Formula"
 )
@@ -175,26 +171,26 @@ console.log(res13)
 
 // SECTION: mat
 console.log("SECTION: mat")
-const res14 = moziMatrixData.mat(
+const res14 = aSrc.mat(
     "a_ethanol_methanol",
     [methanol, ethanol],
 )
 console.log(res14)
 
-const res14_1 = moziMatrixData.mat(
+const res14_1 = aSrc.mat(
     "a_ethanol_methanol",
     [ethanol, methanol],
 )
 console.log(res14_1)
 
 // NOTE: mat dict
-const res15 = moziMatrixData.matDict(
+const res15 = aSrc.matDict(
     "a_ethanol_methanol",
     [methanol, ethanol],
 )
 console.log(res15)
 
-const res15_1 = moziMatrixData.matDict(
+const res15_1 = aSrc.matDict(
     "a_ethanol_methanol",
     [ethanol, methanol],
 )
