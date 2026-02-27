@@ -8,8 +8,7 @@ import {
 import { type RawThermoRecord, type ThermoRecordMap } from "@/types";
 import { MoziMatrixData, type ThermoMatrixRecordMap } from "@/core";
 import {
-    assertRawThermoRecordMatchesComponent,
-    extractComponentDataFromRawThermoRecord
+    extractBinaryMixtureData
 } from '@/utils';
 
 // SECTION: Types
@@ -31,6 +30,9 @@ export const buildMatrixData = (
         description
     );
 
+    // NOTE: analyze the data
+    moziMatrixData.analyzeRawData();
+
     // NOTE: return
     return moziMatrixData.getData();
 }
@@ -45,16 +47,23 @@ export const buildBinaryMixtureData = (
         throw new Error(`Expected exactly 2 components for binary mixture data, but got ${components.length}`);
     }
     // SECTION: Collect component data relevant for the mixture
+    const {
+        mixtureId,
+        mixtureIds,
+        mixtureKey,
+        mixtureDelimiter,
+        records
+    } = extractBinaryMixtureData(components, data);
 
     // SECTION: Build the matrix data
     // NOTE: create MoziMatrixData instance
-    const moziMatrixData = new MoziMatrixData(data);
-
-    // NOTE: find the mixture id for these components (handles both A|B and B|A)
-    const mixtureId: string = moziMatrixData.getMixtureIdForComponents(components);
+    const moziMatrixData = new MoziMatrixData(records);
 
     // >> set the mixture id for the components
     moziMatrixData.componentsMixtureId = mixtureId;
+
+    // >> analyze the data
+    moziMatrixData.analyzeRawData();
 
     // NOTE: get the property symbols available for this mixture
     // available properties

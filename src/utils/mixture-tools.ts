@@ -2,6 +2,7 @@
 import { type BinaryMixtureKey, type Component, type ComponentKey, set_component_id } from "mozithermodb-settings";
 // ! LOCALS
 import type { RawThermoRecord } from "@/types";
+import { match } from "assert";
 
 /**
  * Generates a unique mixture ID based on the component IDs and a specified delimiter.
@@ -13,6 +14,28 @@ import type { RawThermoRecord } from "@/types";
 export const generateMixtureId = (componentId_1: string, componentId_2: string, delimiter: string): string => {
     const componentIds = [componentId_1, componentId_2]
     return componentIds.join(delimiter);
+}
+
+/**
+ * Normalizes a mixture ID by splitting it using the specified delimiter, trimming whitespace, and rejoining the component IDs in a consistent order.
+ * This ensures that mixture IDs with the same components but different formatting (e.g. "methanol|ethanol", "methanol | ethanol", "ethanol|methanol") are treated as equivalent.
+ * @param mixtureId The original mixture ID to normalize (e.g. "methanol | ethanol").
+ * @param mixtureDelimiter The delimiter used to split the mixture ID into component IDs (e.g. "|").
+ * @returns Normalized mixture ID with consistent formatting (e.g. "methanol|ethanol").
+ */
+export const normalizeMixtureId = (
+    mixtureId: string,
+    mixtureDelimiter: string,
+    normalizeMixtureDelimiter: boolean = true
+): string => {
+    // get component ids
+    const componentIds = mixtureId.split(mixtureDelimiter).map(id => id.trim());
+
+    // optionally normalize the mixture delimiter to a consistent format (e.g. always "|")
+    const delimiter = normalizeMixtureDelimiter ? mixtureDelimiter.trim() : mixtureDelimiter;
+
+    // rejoin component ids with the normalized delimiter
+    return componentIds.join(mixtureDelimiter);
 }
 
 export const generateMixtureIds = (
@@ -131,20 +154,114 @@ export const findMixtureDelimiter = (
 }
 
 // SECTION: extract binary mixture data for a pair of components
+// NOTE: Types
+export type ExtractedBinaryMixtureData = {
+    mixtureId: string;
+    mixtureIds: string[];
+    mixtureKey: BinaryMixtureKey;
+    mixtureComponentIds: string[];
+    mixtureDelimiter: string;
+    records: RawThermoRecord[][];
+}
+
 /**
  * Extracts binary mixture data for a pair of components from raw thermo records.
  * @param components Array of two components for which to extract mixture data.
  * @param data Array of raw thermo records containing mixture data for multiple component pairs.
  * @param mixtureKeys Array of mixture keys to use for identifying the mixture (e.g. ["Name", "Formula", "Name-Formula"]).
  * @param mixtureDelimiters Array of delimiters to use for separating component IDs in the mixture ID (e.g. ["|", " | "]).
- * @returns Extracted binary mixture data for the specified components, mixture id, mixture keys, and delimiters.
+ * @param defaultMixtureDelimiter Default delimiter to use for normalizing mixture IDs (e.g. "|").
+ * @returns An object containing the extracted mixture ID, mixture keys, components, and corresponding raw thermo records for the binary mixture.
  * @throws Error if mixture data cannot be found for the specified components.
  */
 export const extractBinaryMixtureData = (
     components: Component[],
     data: RawThermoRecord[][],
     mixtureKeys: BinaryMixtureKey[] = ["Name", "Formula", "Name-Formula"],
-    mixtureDelimiters: string[] = ["|", " | "]
-): any {
+    mixtureDelimiters: string[] = ["|", " | "],
+    defaultMixtureDelimiter = "|"
+): ExtractedBinaryMixtureData => {
+    // NOTE: Check & Validate input
+    if (components.length !== 2) {
+        throw new Error(`Exactly two components are required to extract binary mixture data. Received ${components.length} components.`);
+    }
 
+    // result
+    const result: ExtractedBinaryMixtureData = {
+        mixtureId: "",
+        mixtureIds: [],
+        mixtureKey: "Name",
+        mixtureComponentIds: [],
+        mixtureDelimiter: "|",
+        records: []
+    };
+
+    let found = false;
+
+    // NOTE: Update result with mixture data
+    // >>> Iterate over mixture keys
+    for (const mixtureKey of mixtureKeys) {
+
+        // >>> Iterate over delimiters
+        for (const delimiter of mixtureDelimiters) {
+            try {
+                // generate mixture ids for the current key and delimiter
+                const mixtureIds = generateMixtureIds(components, mixtureKey, delimiter);
+                // >> normalize mixture ids (case-insensitive)
+                const normalizedMixtureIds = mixtureIds.map(id => id.toLowerCase());
+
+
+                // find records matching any of the generated mixture ids
+                const matchingRecords = data.filter(recordArray => {
+                    return recordArray.some(record => {
+                        return record.name.toLowerCase() === "mixture" && normalizedMixtureIds.includes(String(record.value).toLowerCase());
+                    });
+                });
+
+                // if matching records are found, add them to the result
+                if (matchingRecords.length === 2) {
+                    // ! add matching records to result
+                    result.records = matchingRecords;
+
+                    // ! add mixture id, key, and delimiter, mixture ids
+                    result.mixtureIds = generateMixtureIds(components, mixtureKey, defaultMixtureDelimiter);
+                    const mixtureId = matchingRecords[0].find(record => record.name.toLowerCase() === "mixture")?.value as string;
+                    // >> normalize mixture id
+                    result.mixtureId = normalizeMixtureId(mixtureId, defaultMixtureDelimiter, true);
+                    // upd mixture key and delimiter based on the found mixture id
+                    matchingRecords.forEach(recordArray => {
+                        const mixtureRecord = recordArray.find(record => record.name.toLowerCase() === "mixture");
+                        // >> upd mixture value
+                        if (mixtureRecord) {
+                            mixtureRecord.value = result.mixtureId;
+                        }
+                    });
+
+                    result.mixtureKey = mixtureKey;
+                    result.mixtureDelimiter = delimiter;
+
+                    // ! add component ids for the mixture
+                    result.mixtureComponentIds = components.map(component => set_component_id(component, mixtureKey));
+
+                    found = true;
+                    break;
+                }
+            }
+            catch (error) {
+                // continue to next combination of mixture key and delimiter if an error occurs
+                continue;
+            }
+        }
+
+        if (found) {
+            break;
+        }
+    }
+
+    // check if any matching records were found
+    if (result.records.length === 0) {
+        throw new Error(`Failed to extract binary mixture data for components '${components.map(c => c.name).join(", ")}'. No matching records found.`);
+    }
+
+    return result;
 }

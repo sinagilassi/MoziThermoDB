@@ -32,7 +32,7 @@ const mixture: Component[] = [methanol, ethanol];
 
 // NOTE: matrix data
 const methanolEthanolRecords: RawThermoRecord[] = [
-    { name: "Mixture", symbol: "-", value: "methanol | ethanol", unit: "N/A" },
+    { name: "Mixture", symbol: "-", value: "methanol|ethanol", unit: "N/A" },
     { name: "Name", symbol: "-", value: "Methanol", unit: "N/A" },
     { name: "Formula", symbol: "-", value: "CH3OH", unit: "N/A" },
     { name: "State", symbol: "-", value: "l", unit: "N/A" },
@@ -47,7 +47,7 @@ const methanolEthanolRecords: RawThermoRecord[] = [
 ]
 
 const ethanolMethanolRecords: RawThermoRecord[] = [
-    { name: "Mixture", symbol: "-", value: "methanol | ethanol", unit: "N/A" },
+    { name: "Mixture", symbol: "-", value: "methanol|ethanol", unit: "N/A" },
     { name: "Name", symbol: "-", value: "Ethanol", unit: "N/A" },
     { name: "Formula", symbol: "-", value: "C2H5OH", unit: "N/A" },
     { name: "State", symbol: "-", value: "l", unit: "N/A" },
@@ -69,6 +69,9 @@ const moziMatrixData = new MoziMatrixData(
     "Matrix Data",
     "Thermodynamic matrix data for methanol-ethanol mixture"
 );
+
+// initialize the data (analyze and process the raw data to build the matrix data structure)
+moziMatrixData.analyzeRawData();
 
 // SECTION: get property for a component pair
 const res1 = moziMatrixData.getProperty(
