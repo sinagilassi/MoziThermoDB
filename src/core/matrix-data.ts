@@ -560,7 +560,7 @@ export class MoziMatrixData {
     }
 
     // SECTION: Find mixture id from component names (handles both orderings A|B and B|A)
-    findMixtureId(componentNames: string[]): string {
+    findMixtureId(componentNames: string[]): string | null {
         if (!componentNames || componentNames.length === 0) {
             throw new Error("Component names array is empty!");
         }
@@ -569,25 +569,28 @@ export class MoziMatrixData {
         const mixtureName1 = componentNames.join(this.mixtureDelimiter); // e.g. ["methanol", "ethanol"] → "methanol|ethanol"
         const mixtureName2 = [...componentNames].reverse().join(this.mixtureDelimiter); // e.g. ["ethanol", "methanol"] → "ethanol|methanol"
 
+        // NOTE: normalize to lowercase for case-insensitive comparison
+        const mixtureName1Lower = mixtureName1.toLowerCase();
+        const mixtureName2Lower = mixtureName2.toLowerCase();
+
         // NOTE: find mixture id that matches these components
         let res: { mixture: string, mixtureId: string } | null = null;
 
         // iterate over matrix data
         for (const [mixtureName, mixtureData] of Object.entries(this.matrixData)) {
+            // check if any mixtureId matches (case-insensitive)
+            const matchingId = mixtureData.mixtureIds.find(id =>
+                id.toLowerCase() === mixtureName1Lower || id.toLowerCase() === mixtureName2Lower
+            );
 
-            if (mixtureData.mixtureIds.includes(mixtureName1)) {
-                res = { mixture: mixtureName, mixtureId: mixtureName1 };
-                break;
-            }
-
-            if (mixtureData.mixtureIds.includes(mixtureName2)) {
-                res = { mixture: mixtureName, mixtureId: mixtureName2 };
+            if (matchingId) {
+                res = { mixture: mixtureName, mixtureId: matchingId };
                 break;
             }
         }
 
         if (!res) {
-            throw new Error(`No mixture found for components '${componentNames.join(", ")}'.`);
+            return null;
         }
         return res.mixture;
     }
@@ -612,6 +615,28 @@ export class MoziMatrixData {
         throw new Error(`No mixture key found for mixture IDs '${mixtureIds.join(", ")}'.`);
     }
 
+    // SECTION: Get mixture id for a pair of components (handles both orderings A|B and B|A)
+    getMixtureIdForComponents(components: Component[]): string {
+        if (!components || components.length === 0) {
+            throw new Error("Components array is empty!");
+        }
+        const componentNames = components.map(c => c.name);
+        const res1 = this.findMixtureId(componentNames);
+
+        if (res1) {
+            return res1;
+        }
+
+        // by component formulas
+        const componentFormulas = components.map(c => c.formula);
+        const res2 = this.findMixtureId(componentFormulas);
+        if (res2) {
+            return res2;
+        }
+
+        throw new Error(`No mixture ID found for components '${componentNames.join(", ")}'.`);
+    }
+
     // SECTION: Get all matrix properties for a given property symbol (e.g. "a_i_j | component1 | component2" or "a | component1 | component2") for all pairs of components in a mixture
     ijs(
         propertySymbol: string,
@@ -634,6 +659,10 @@ export class MoziMatrixData {
 
         // find mixture id that matches these components (handles both A|B and B|A)
         const mixtureId = this.findMixtureId(componentNames);
+        // >> check
+        if (!mixtureId) {
+            throw new Error(`No mixture found for components '${componentNames.join(", ")}' in property symbol '${propertySymbol}'.`);
+        }
 
         // NOTE: get mixture key
         const mixtureKey = this.matrixData[mixtureId].mixtureKey as BinaryMixtureKey;

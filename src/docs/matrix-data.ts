@@ -1,10 +1,22 @@
 import {
+    type BinaryMixtureKey,
     type Component,
+    create_binary_mixture_id
 } from "mozithermodb-settings"
 
 // ! LOCALS
 import { type RawThermoRecord, type ThermoRecordMap } from "@/types";
 import { MoziMatrixData, type ThermoMatrixRecordMap } from "@/core";
+import {
+    assertRawThermoRecordMatchesComponent,
+    extractComponentDataFromRawThermoRecord
+} from '@/utils';
+
+// SECTION: Types
+export type BinaryMixtureData = {
+    [key: string]: MoziMatrixData
+}
+
 
 
 export const buildMatrixData = (
@@ -23,3 +35,40 @@ export const buildMatrixData = (
     return moziMatrixData.getData();
 }
 
+export const buildBinaryMixtureData = (
+    components: Component[],
+    data: RawThermoRecord[][],
+): Record<string, BinaryMixtureData> => {
+    // SECTION: Input validation
+    // NOTE: binary components
+    if (components.length !== 2) {
+        throw new Error(`Expected exactly 2 components for binary mixture data, but got ${components.length}`);
+    }
+
+    // SECTION: Build the matrix data
+    // NOTE: create MoziMatrixData instance
+    const moziMatrixData = new MoziMatrixData(data);
+
+    // NOTE: find the mixture id for these components (handles both A|B and B|A)
+    const mixtureId: string = moziMatrixData.getMixtureIdForComponents(components);
+
+    // available properties
+    const properties = moziMatrixData.getMixturePropertySymbols(mixtureId);
+
+    // looping over properties to build a data map for this mixture
+    const binaryMixtureData: BinaryMixtureData = {};
+
+    properties.forEach(propertySymbol => {
+        // assign
+        Object.assign(binaryMixtureData, {
+            [propertySymbol]: moziMatrixData
+        })
+    });
+
+    // NOTE: return map keyed by mixture id
+    const res: Record<string, BinaryMixtureData> = {};
+    res[mixtureId] = binaryMixtureData;
+
+    // res
+    return res;
+}

@@ -229,6 +229,8 @@ export const buildComponentEquation = function (
 
     // NOTE: return the configured equation (keyed by component id for lookup)
     const componentEquation: Record<string, ComponentEquation> = {};
+
+    // Attach the same configured equation instance to each component id alias for this component
     componentIds.forEach(id => {
         componentEquation[id] = {
             [equationSymbol]: configuredEquation
@@ -254,7 +256,9 @@ export const buildComponentsEquation = function (
     // iterate over components and build an equation for each using the provided data
     components.forEach(component => {
         const componentData = extractComponentDataFromRawThermoRecord(component, data, dataComponentMatchKey);
-        const componentEq = buildComponentEquation(
+
+        // ! component equation map for this component
+        const componentEq: Record<string, ComponentEquation> = buildComponentEquation(
             component,
             equation,
             componentData.records,
@@ -262,14 +266,14 @@ export const buildComponentsEquation = function (
             enableDataComponentMatchCheck,
             dataComponentMatchKey
         );
+
+        // merge the component equation into the overall map (handles multiple aliases per component)
         Object.assign(componentEquations, componentEq);
-    }
-    );
+    });
 
     // res
     return componentEquations;
 }
-
 
 
 /**
