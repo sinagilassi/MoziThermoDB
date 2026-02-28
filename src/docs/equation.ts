@@ -106,6 +106,15 @@ export interface LaunchEquationAsync {
  *   V: { value: 0.024465, unit: "m^3", symbol: "V" }
  * });
  * ```
+ *
+ * @param configParams Parameter metadata and defaults for the equation.
+ * @param configArgs Runtime argument metadata for equation evaluation.
+ * @param configRet Return metadata (expects exactly one return symbol).
+ * @param equation Equation implementation function.
+ * @param name Optional equation name.
+ * @param description Optional equation description.
+ * @returns A reusable `MoziEquation` template.
+ * @throws Error If `configRet` defines multiple return symbols.
  */
 export const createEq = function (
     configParams: ConfigParamMap,
@@ -162,6 +171,10 @@ export const createEq = function (
  * ]);
  * // configured.equation -> independently configured MoziEquation instance
  * ```
+ *
+ * @param equation Reusable equation template to clone and configure.
+ * @param data Raw thermo records used to configure the cloned equation.
+ * @returns The configured equation plus symbol and unit metadata.
  */
 export const buildEquation = function (
     equation: MoziEquation,
@@ -201,6 +214,15 @@ export const buildEquation = function (
  * Guard args
  * - `enableDataComponentMatchCheck`: enables component/data validation before configure
  * - `dataComponentMatchKey`: key format used for validation (e.g. `"Name-Formula"`)
+ *
+ * @param component Component whose equation map should be created.
+ * @param equation Reusable equation template to clone and configure.
+ * @param data Raw thermo records used to configure the cloned equation.
+ * @param componentKey Component id alias formats used as result keys.
+ * @param enableDataComponentMatchCheck Enables strict component/data validation.
+ * @param dataComponentMatchKey Component id key format used for validation.
+ * @returns A map keyed by generated component ids, each containing the configured equation by symbol.
+ * @throws Error When component/data matching is enabled and the records do not match the component.
  */
 export const buildComponentEquation = function (
     component: Component,
@@ -242,6 +264,21 @@ export const buildComponentEquation = function (
 }
 
 
+/**
+ * Build and merge configured equation maps for multiple components.
+ *
+ * For each component, this function extracts matching raw thermo records,
+ * configures a cloned equation instance, and stores it under all requested
+ * component id aliases.
+ *
+ * @param components Components to process.
+ * @param equation Reusable equation template to clone/configure per component.
+ * @param data Raw thermo datasets to search for each component.
+ * @param componentKey Component id alias formats used in the result map.
+ * @param enableDataComponentMatchCheck Enables strict component/data validation.
+ * @param dataComponentMatchKey Component id key format used for matching/validation.
+ * @returns A merged map keyed by generated component ids.
+ */
 export const buildComponentsEquation = function (
     components: Component[],
     equation: MoziEquation,
@@ -308,6 +345,17 @@ export const buildComponentsEquation = function (
  *   }
  * );
  * ```
+ *
+ * @param configParams Parameter metadata and defaults for the equation.
+ * @param configArgs Runtime argument metadata for equation evaluation.
+ * @param configRet Return metadata used to create the equation symbol.
+ * @param equation Equation implementation function.
+ * @param data Raw thermo records used for equation configuration.
+ * @param args Runtime input arguments passed to `calc`.
+ * @param name Optional equation name.
+ * @param description Optional equation description.
+ * @returns The created equation, its symbol, and evaluated result.
+ * @throws Error If `configRet` defines multiple return symbols.
  */
 export const launchEq = function (
     configParams: ConfigParamMap,
@@ -378,6 +426,17 @@ export const launchEq = function (
  *   "Computes compressibility factor Z"
  * );
  * ```
+ *
+ * @param configParams Parameter metadata and defaults for the equation.
+ * @param configArgs Runtime argument metadata for equation evaluation.
+ * @param configRet Return metadata used to create the equation symbol.
+ * @param equation Equation implementation function.
+ * @param data Raw thermo records used for equation configuration.
+ * @param args Runtime input arguments passed to `calcAsync`.
+ * @param name Optional equation name.
+ * @param description Optional equation description.
+ * @returns A promise resolving to the created equation, its symbol, and evaluated result.
+ * @throws Error If `configRet` defines multiple return symbols.
  */
 export const launchEqAsync = function (
     configParams: ConfigParamMap,

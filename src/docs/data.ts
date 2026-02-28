@@ -28,6 +28,11 @@ export type ComponentData = { [key: string]: ThermoRecordMap };
  * Notes
  * - Uses `MoziData`, which stores both raw records and cleaned numeric records internally
  * - Returned map is suitable for equation/data-source usage
+ *
+ * @param data Raw thermo records to clean and transform.
+ * @param name Optional dataset name.
+ * @param description Optional dataset description.
+ * @returns A symbol-keyed thermo record map with cleaned numeric values.
  */
 export const buildData = (
     data: RawThermoRecord[],
@@ -60,6 +65,14 @@ export const buildData = (
  *
  * Returns
  * - `ComponentData` map: `{ [componentId]: ThermoRecordMap }`
+ *
+ * @param component Component whose thermo-data map should be created.
+ * @param data Raw thermo records used to build cleaned component data.
+ * @param componentKey Component id alias formats used as result keys.
+ * @param enableDataComponentMatchCheck Enables strict component/data validation.
+ * @param dataComponentMatchKey Component id key format used for validation.
+ * @returns A map keyed by generated component ids.
+ * @throws Error When component/data matching is enabled and records do not match the component.
  */
 export const buildComponentData = (
     component: Component,
@@ -101,6 +114,13 @@ export const buildComponentData = (
  * - `data` must be an array of raw-data blocks (`RawThermoRecord[][]`), one block per component
  * - Matching is performed using `dataComponentMatchKey`
  * - Each component may emit multiple aliases depending on `componentKey`
+ *
+ * @param components Components to process.
+ * @param data Raw thermo record blocks to match against components.
+ * @param componentKey Component id alias formats used in the result map.
+ * @param enableDataComponentMatchCheck Enables strict component/data validation.
+ * @param dataComponentMatchKey Component id key format used for matching/validation.
+ * @returns A merged map keyed by generated component ids.
  */
 export const buildComponentsData = (
     components: Component[],
