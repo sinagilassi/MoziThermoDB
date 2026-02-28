@@ -27,7 +27,9 @@ import {
     generateMixtureKey,
     findMixtureKey,
     findMixtureKeyFromComponents,
-    normalizeMixtureId
+    normalizeMixtureId,
+    reorderMixtureComponents,
+    generateAllMixtureIds
 } from '@/utils';
 
 // SECTION: Types & Interfaces
@@ -155,6 +157,15 @@ export class MoziMatrixData {
 
         // remove duplicates
         return Array.from(new Set(mixtureNames));
+    }
+
+    // SECTION: get components for a mixture
+    getMixtureComponents(mixtureName: string): Component[] {
+        const mixtureData = this.matrixData[mixtureName];
+        if (!mixtureData) {
+            throw new Error(`Mixture with name '${mixtureName}' not found.`);
+        }
+        return mixtureData.components;
     }
 
     // SECTION: get component index for mixture
@@ -314,15 +325,25 @@ export class MoziMatrixData {
             res[mixtureNameRecord.value as string].props = props;
         });
 
-        // NOTE: extract mixture keys
+        // NOTE: extract & update
         Object.entries(res).forEach(([mixtureName, mixtureData]) => {
+            // ! mixture key
             const mixtureKey = findMixtureKeyFromComponents(
                 mixtureName,
                 mixtureData.components,
                 ["Name", "Formula", "Name-Formula"],
             )
-
+            // upd
             res[mixtureName].mixtureKey = mixtureKey;
+
+            // ! mixture ids
+            const mixtureIds = generateAllMixtureIds(
+                mixtureData.components,
+                ["Name", "Formula", "Name-Formula"],
+                this.mixtureDelimiter
+            );
+            // upd
+            res[mixtureName].mixtureIds = mixtureIds;
         });
 
         // NOTE: build mixture records map with component keys and raw thermo records
@@ -444,7 +465,7 @@ export class MoziMatrixData {
     getPropertyMatrix(mixtureId: string, propId: string): number[][] {
         // NOTE: Normalize mixture id
         // ! always "component-id|component-id" format for mixture id when accessing property matrices
-        mixtureId = normalizeMixtureId(mixtureId, this.mixtureDelimiter, true);
+        mixtureId = normalizeMixtureId(mixtureId, this.mixtureDelimiter, true, true);
 
         // check if mixture exists
         if (!this.matrixData[mixtureId]) {
@@ -463,9 +484,12 @@ export class MoziMatrixData {
         component: Component,
         mixtureId: string,
     ): number[] {
+        // NOTE: Find main mixture id
+        mixtureId = this.findMainMixtureName(mixtureId);
+
         // NOTE: Normalize mixture id
         // ! always "component-id|component-id" format for mixture id when accessing property matrices
-        mixtureId = normalizeMixtureId(mixtureId, this.mixtureDelimiter, true);
+        mixtureId = normalizeMixtureId(mixtureId, this.mixtureDelimiter, true, true);
 
         // NOTE: property symbol format: "prop_i_j" where i and j are component indices in the mixture
         const propPrefix = this.getPropertyPrefix(propertySymbol); // e.g. "a_i_j" → "a"
@@ -497,9 +521,12 @@ export class MoziMatrixData {
         componentKey: ComponentKey = "Name-Formula",
         keyDelimiter: string = "_",
     ): CustomProperty {
+        // NOTE: Find main mixture id
+        mixtureId = this.findMainMixtureName(mixtureId);
+
         // NOTE: Normalize mixture id
         // ! always "component-id|component-id" format for mixture id when accessing property matrices
-        mixtureId = normalizeMixtureId(mixtureId, this.mixtureDelimiter, true);
+        mixtureId = normalizeMixtureId(mixtureId, this.mixtureDelimiter, true, true);
 
         // NOTE: property symbol format: "prop_i_j" where i and j are component indices in the mixture
         const {
@@ -630,6 +657,25 @@ export class MoziMatrixData {
         throw new Error(`No mixture ID found for components '${componentNames.join(", ")}'.`);
     }
 
+    // SECTION: Find main mixture name
+    findMainMixtureName(mixtureName: string): string {
+        // NOTE: normalize mixture name
+        const normalizedMixtureName = mixtureName.trim().toLowerCase();
+
+        // NOTE: iterate over mixture -> mixture ids
+        for (const [name, mixtureData] of Object.entries(this.matrixData)) {
+            // check if any mixtureId matches (case-insensitive)
+            const matchingId = mixtureData.mixtureIds.find(id =>
+                id.toLowerCase() === normalizedMixtureName
+            );
+            if (matchingId) {
+                return name;
+            }
+        }
+
+        throw new Error(`No main mixture name found for mixture name '${mixtureName}'.`);
+    }
+
     // SECTION: Get matrix property by symbol (e.g. "a_1_2", "a_methanol_ethanol") for a pair of components in a mixture
     ij(
         propertySymbol: string,
@@ -637,9 +683,12 @@ export class MoziMatrixData {
         componentKey: ComponentKey = "Name-Formula",
         keyDelimiter: string = "_"
     ): CustomProperty {
+        // NOTE: Find main mixture id
+        mixtureId = this.findMainMixtureName(mixtureId);
+
         // NOTE: Normalize mixture id
         // ! always "component-id|component-id" format for mixture id when accessing property matrices
-        mixtureId = normalizeMixtureId(mixtureId, this.mixtureDelimiter, true);
+        mixtureId = normalizeMixtureId(mixtureId, this.mixtureDelimiter, true, true);
 
         // NOTE: property symbol format: "prop_i_j" where i and j are component indices in the mixture
         const {
@@ -813,6 +862,9 @@ export class MoziMatrixData {
             const {
                 propertyPrefix: propPrefix,
                 propertyDelimiter,
+                i,
+                j,
+                mode
             } = propertyParser(
                 propertySymbol,
             )
@@ -833,6 +885,18 @@ export class MoziMatrixData {
             // NOTE: get component count
             const componentNum = components.length;
 
+            // >> reorder components based on mixture key
+            const reorderComponents = reorderMixtureComponents(
+                i,
+                j,
+                components,
+                mixtureKey
+            );
+            // >> check
+            if (!reorderComponents || reorderComponents.length !== components.length) {
+                throw new Error("Reordered components array is invalid!");
+            }
+
             // NOTE: matrix data (2D array initialized)
             const matIj: number[][] = Array(componentNum)
                 .fill(null)
@@ -844,8 +908,8 @@ export class MoziMatrixData {
             // SECTION: iterate over components in order to build matrix
             for (let i = 0; i < componentNum; i++) {
                 for (let j = 0; j < componentNum; j++) {
-                    const component_i = components[i];
-                    const component_j = components[j];
+                    const component_i = reorderComponents[i];
+                    const component_j = reorderComponents[j];
 
                     // get component ids using the componentKey
                     const componentId_i = set_component_id(component_i, mixtureKey);

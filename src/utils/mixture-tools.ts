@@ -17,19 +17,27 @@ export const generateMixtureId = (componentId_1: string, componentId_2: string, 
 }
 
 /**
- * Normalizes a mixture ID by splitting it using the specified delimiter, trimming whitespace, and rejoining the component IDs in a consistent order.
+ * Normalizes a mixture ID by splitting it using the specified delimiter, trimming whitespace, and rejoining the component IDs in a consistent order, optionally converting to lowercase. This helps ensure that mixture IDs with the same components but different formatting are treated as equivalent.
  * This ensures that mixture IDs with the same components but different formatting (e.g. "methanol|ethanol", "methanol | ethanol", "ethanol|methanol") are treated as equivalent.
  * @param mixtureId The original mixture ID to normalize (e.g. "methanol | ethanol").
  * @param mixtureDelimiter The delimiter used to split the mixture ID into component IDs (e.g. "|").
+ * @param normalizeId Whether to normalize the mixture ID by trimming whitespace and rejoining component IDs (default: true).
+ * @param normalizeMixtureDelimiter Whether to normalize the mixture delimiter by trimming whitespace (default: true).
  * @returns Normalized mixture ID with consistent formatting (e.g. "methanol|ethanol").
  */
 export const normalizeMixtureId = (
     mixtureId: string,
     mixtureDelimiter: string,
+    normalizeId: boolean = true,
     normalizeMixtureDelimiter: boolean = true
 ): string => {
     // get component ids
-    const componentIds = mixtureId.split(mixtureDelimiter).map(id => id.trim());
+    let componentIds = mixtureId.split(mixtureDelimiter).map(id => id.trim());
+    // >> normalize
+    if (normalizeId) {
+        // lowercase
+        componentIds = componentIds.map(id => id.toLowerCase());
+    }
 
     // optionally normalize the mixture delimiter to a consistent format (e.g. always "|")
     const delimiter = normalizeMixtureDelimiter ? mixtureDelimiter.trim() : mixtureDelimiter;
@@ -47,6 +55,21 @@ export const generateMixtureIds = (
     const mixtureId1 = generateMixtureId(componentIds[0], componentIds[1], delimiter);
     const mixtureId2 = generateMixtureId(componentIds[1], componentIds[0], delimiter);
     return [mixtureId1, mixtureId2];
+}
+
+
+export const generateAllMixtureIds = (
+    components: Component[],
+    mixtureKeys: BinaryMixtureKey[],
+    delimiter: string
+): string[] => {
+    const mixtureIds: string[] = [];
+    mixtureKeys.forEach(mixtureKey => {
+        const ids = generateMixtureIds(components, mixtureKey, delimiter);
+        mixtureIds.push(...ids);
+    });
+
+    return mixtureIds;
 }
 
 export const findMixtureComponent = (
@@ -227,7 +250,7 @@ export const extractBinaryMixtureData = (
                     result.mixtureIds = generateMixtureIds(components, mixtureKey, defaultMixtureDelimiter);
                     const mixtureId = matchingRecords[0].find(record => record.name.toLowerCase() === "mixture")?.value as string;
                     // >> normalize mixture id
-                    result.mixtureId = normalizeMixtureId(mixtureId, defaultMixtureDelimiter, true);
+                    result.mixtureId = normalizeMixtureId(mixtureId, defaultMixtureDelimiter, true, true);
                     // upd mixture key and delimiter based on the found mixture id
                     matchingRecords.forEach(recordArray => {
                         const mixtureRecord = recordArray.find(record => record.name.toLowerCase() === "mixture");
@@ -238,7 +261,8 @@ export const extractBinaryMixtureData = (
                     });
 
                     result.mixtureKey = mixtureKey;
-                    result.mixtureDelimiter = delimiter;
+                    // Must be the default delimiter used for normalization to ensure consistency in the mixture ID format across the dataset
+                    result.mixtureDelimiter = defaultMixtureDelimiter;
 
                     // ! add component ids for the mixture
                     result.mixtureComponentIds = components.map(component => set_component_id(component, mixtureKey));
@@ -264,4 +288,27 @@ export const extractBinaryMixtureData = (
     }
 
     return result;
+}
+
+// SECTION: reorder mixture components with property symbol
+export const reorderMixtureComponents = (
+    i: string,
+    j: string,
+    components: Component[],
+    mixtureKey: BinaryMixtureKey,
+): Component[] | null => {
+    // generate component ids for the mixture key
+    const componentIds = components.map(component => set_component_id(component, mixtureKey).toLowerCase());
+
+    // find the index of the components corresponding to i and j
+    const index_i = componentIds.findIndex(id => id === i.toLowerCase());
+    const index_j = componentIds.findIndex(id => id === j.toLowerCase());
+
+    // if both components are found, reorder them according to the indices
+    if (index_i !== -1 && index_j !== -1) {
+        return [components[index_i], components[index_j]];
+    }
+
+    // if not found, return the original order
+    return null;
 }
