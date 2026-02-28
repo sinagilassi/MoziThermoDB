@@ -5,8 +5,8 @@ import {
 } from "mozithermodb-settings"
 
 // ! LOCALS
-import { type RawThermoRecord, type ThermoRecordMap } from "@/types";
-import { MoziMatrixData, type ThermoMatrixRecordMap } from "@/core";
+import { type RawThermoRecord, type ThermoMatrixRecordMap } from "@/types";
+import { MoziMatrixData } from "@/core";
 import {
     extractBinaryMixtureData
 } from '@/utils';

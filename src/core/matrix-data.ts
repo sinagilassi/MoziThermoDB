@@ -5,58 +5,28 @@ import {
     type ComponentKey,
     type BinaryMixtureKey,
     set_component_id,
-    create_binary_mixture_id,
-    infer_binary_mixture_key
 } from 'mozithermodb-settings';
 // ! LOCALS
 import {
     RawThermoRecord,
-    ThermoRecordMap,
-    MixtureRawThermoData,
-    MixtureComponentsRawThermoData
+    ThermoMatrixRecordMap,
+    PropData,
+    MixturePropData
 } from '@/types';
 import {
     cleanRawThermoRecord,
-    getMixtureComponents,
     getMixtureProps,
     propertyParser,
     generateMixturePropertyKey,
     generateMixtureId,
-    generateMixtureIds,
     findMixtureComponent,
     generateMixtureKey,
-    findMixtureKey,
     findMixtureKeyFromComponents,
     normalizeMixtureId,
     reorderMixtureComponents,
     generateAllMixtureIds
 } from '@/utils';
 
-// SECTION: Types & Interfaces
-type Props = {
-    symbol: string;
-    unit: string;
-}
-
-export type ThermoMatrixRecordMap = {
-    [mixture: string]: {
-        mixtureKey: BinaryMixtureKey | null;
-        mixtureIds: string[];
-        mixtureComponentIds: string[];
-        components: Component[];
-        records: { [componentId: string]: RawThermoRecord[] };
-        props: Props[];
-    };
-}
-
-// NOTE: Property data for a mixture
-type PropData = {
-    [propertySymbol: string]: number[][];
-}
-
-type MixturePropData = {
-    [mixture: string]: PropData;
-}
 
 export class MoziMatrixData {
     // SECTION: Attributes

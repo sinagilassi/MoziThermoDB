@@ -1,4 +1,4 @@
-import { Component } from 'mozithermodb-settings';
+import { type Component, type BinaryMixtureKey } from 'mozithermodb-settings';
 // import libs
 
 // NOTE: Raw ThermoRecord
@@ -40,13 +40,34 @@ export type MixtureRawThermoData = {
     [mixture: string]: MixtureComponentsRawThermoData;
 }
 
-// NOTE: ThermoMatrixRecordMap is a map of mixture value to ThermoRecordMap
-export type ThermoMatrixRecordMap = {
-    [mixture: string]: ThermoRecordMap;
-}
-
 // NOTE: Mixture thermo data
 export type MixtureThermoData = {
     components: Component[];
     records: ThermoMatrixRecordMap;
+}
+
+// SECTION: Types & Interfaces
+export type Props = {
+    symbol: string;
+    unit: string;
+}
+
+export type ThermoMatrixRecordMap = {
+    [mixture: string]: {
+        mixtureKey: BinaryMixtureKey | null;
+        mixtureIds: string[];
+        mixtureComponentIds: string[];
+        components: Component[];
+        records: { [componentId: string]: RawThermoRecord[] };
+        props: Props[];
+    };
+}
+
+// NOTE: Property data for a mixture
+export type PropData = {
+    [propertySymbol: string]: number[][];
+}
+
+export type MixturePropData = {
+    [mixture: string]: PropData;
 }
