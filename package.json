@@ -1,6 +1,6 @@
 {
   "name": "mozithermodb",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "MoziThermoDB is a comprehensive database of thermodynamic properties for chemical species, designed to support various applications in chemistry and engineering.",
   "keywords": [
     "thermodynamics",
@@ -34,7 +34,8 @@
       "browser": "./dist/index.browser.mjs",
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
-    }, "./utils": {
+    },
+    "./utils": {
       "types": "./dist/utils/index.d.ts",
       "browser": "./dist/utils/index.browser.mjs",
       "import": "./dist/utils/index.mjs",
