@@ -35,37 +35,42 @@ const jsPlugins = [
   }),
 ];
 
+const buildTargets = [
+  { input: "src/index.ts", outBase: "dist/index" },
+  { input: "src/utils/index.ts", outBase: "dist/utils/index" },
+];
+
 export default [
-  {
-    input: "src/index.ts",
+  ...buildTargets.map(({ input, outBase }) => ({
+    input,
     external: isExternal,
     plugins: jsPlugins,
     output: [
       {
-        file: "dist/index.mjs",
+        file: `${outBase}.mjs`,
         format: "es",
         sourcemap: true,
       },
       {
-        file: "dist/index.cjs",
+        file: `${outBase}.cjs`,
         format: "cjs",
         exports: "named",
         sourcemap: true,
       },
       {
-        file: "dist/index.browser.mjs",
+        file: `${outBase}.browser.mjs`,
         format: "es",
         sourcemap: true,
       },
     ],
-  },
-  {
-    input: "src/index.ts",
+  })),
+  ...buildTargets.map(({ input, outBase }) => ({
+    input,
     external: isExternal,
     plugins: [tsconfigPaths(), dts({ tsconfig: "./tsconfig.json" })],
     output: {
-      file: "dist/index.d.ts",
+      file: `${outBase}.d.ts`,
       format: "es",
     },
-  },
+  })),
 ];
