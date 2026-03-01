@@ -102,11 +102,11 @@ console.log("Built binary mixtures data:", binaryMixturesData);
 console.log("Built mixture ids:", Object.keys(binaryMixturesData));
 
 // SECTION: access property matrix source for each mixture
-const methanolEthanolId = "methanol|ethanol";
-const methanolMethaneId = "methanol|methane";
+const methanolEthanolId = "Methanol|Ethanol";
+const methanolMethaneId = "Methanol|Methane";
 // reverse
-const ethanolMethanolId = "ethanol|methanol";
-const methaneMethanolId = "methane|methanol";
+const ethanolMethanolId = "Ethanol|Methanol";
+const methaneMethanolId = "Methane|Methanol";
 
 const methanolEthanolASrc: MoziMatrixData = binaryMixturesData[methanolEthanolId]["a"];
 const methanolMethaneASrc: MoziMatrixData = binaryMixturesData[methanolMethaneId]["a"];
