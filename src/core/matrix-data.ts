@@ -855,13 +855,21 @@ export class MoziMatrixData {
             // NOTE: get component count
             const componentNum = components.length;
 
-            // >> reorder components based on mixture key
-            const reorderComponents = reorderMixtureComponents(
-                i,
-                j,
-                components,
-                mixtureKey
-            );
+            // ! >> reorder components based on mixture key
+            let reorderComponents: Component[] | null = null;
+
+            if (i === "i" && j === "j") {
+                // no reordering needed, use components as is
+                reorderComponents = components;
+            } else {
+                reorderComponents = reorderMixtureComponents(
+                    i,
+                    j,
+                    components,
+                    mixtureKey
+                );
+            }
+
             // >> check
             if (!reorderComponents || reorderComponents.length !== components.length) {
                 throw new Error("Reordered components array is invalid!");
