@@ -5,7 +5,7 @@ import {
     type CustomProperty,
     create_binary_mixture_id
 } from "mozithermodb-settings";
-import type { BinaryMixtureData } from "@/docs/matrix-data";
+import type { BinaryMixtureData, BinaryMixtureDataMap } from "@/docs/matrix-data";
 import { MoziMatrixData } from "@/core";
 import { Source } from "./source";
 
@@ -45,25 +45,67 @@ export class MatrixDataSourceCore {
         const dataSource = this.source.datasource;
         if (!dataSource || typeof dataSource !== "object") return {};
 
-        const res: BinaryMixtureData = {};
-        for (const [key, value] of Object.entries(dataSource as Record<string, unknown>)) {
-            const isMatrixLike =
-                value instanceof MoziMatrixData ||
-                (
-                    !!value &&
-                    typeof value === "object" &&
-                    typeof (value as { mat?: unknown }).mat === "function" &&
-                    typeof (value as { matDict?: unknown }).matDict === "function" &&
-                    typeof (value as { ij?: unknown }).ij === "function" &&
-                    typeof (value as { getProperty?: unknown }).getProperty === "function"
-                );
+        const isMatrixLike = (value: unknown): value is MoziMatrixData =>
+            value instanceof MoziMatrixData ||
+            (
+                !!value &&
+                typeof value === "object" &&
+                typeof (value as { mat?: unknown }).mat === "function" &&
+                typeof (value as { matDict?: unknown }).matDict === "function" &&
+                typeof (value as { ij?: unknown }).ij === "function" &&
+                typeof (value as { getProperty?: unknown }).getProperty === "function"
+            );
 
-            if (isMatrixLike) {
-                res[key] = value as MoziMatrixData;
+        const isBinaryMixtureDataLike = (value: unknown): value is BinaryMixtureData => {
+            if (!value || typeof value !== "object") return false;
+            const entries = Object.values(value as Record<string, unknown>);
+            if (entries.length === 0) return false;
+            return entries.some(entry => isMatrixLike(entry));
+        };
+
+        const sourceObject = dataSource as Record<string, unknown>;
+
+        // Case 1: datasource is already flattened BinaryMixtureData.
+        if (isBinaryMixtureDataLike(sourceObject)) {
+            const direct: BinaryMixtureData = {};
+            for (const [key, value] of Object.entries(sourceObject)) {
+                if (isMatrixLike(value)) {
+                    direct[key] = value as MoziMatrixData;
+                }
             }
+            if (Object.keys(direct).length > 0) return direct;
         }
 
-        return res;
+        // Case 2: datasource is BinaryMixtureDataMap keyed by mixture id.
+        const map = sourceObject as BinaryMixtureDataMap;
+        const candidates = [this.forwardMixtureId, this.reverseMixtureId]
+            .filter(id => typeof id === "string" && id.length > 0);
+
+        for (const candidate of candidates) {
+            const matchedKey = Object.keys(map).find(k => k.trim().toLowerCase() === candidate.trim().toLowerCase());
+            if (!matchedKey) continue;
+
+            const maybeBinary = map[matchedKey];
+            if (!isBinaryMixtureDataLike(maybeBinary)) continue;
+
+            const selected: BinaryMixtureData = {};
+            for (const [k, v] of Object.entries(maybeBinary as Record<string, unknown>)) {
+                if (isMatrixLike(v)) selected[k] = v as MoziMatrixData;
+            }
+            if (Object.keys(selected).length > 0) return selected;
+        }
+
+        // Case 3: fallback to first nested BinaryMixtureData in the map.
+        for (const value of Object.values(map)) {
+            if (!isBinaryMixtureDataLike(value)) continue;
+            const fallback: BinaryMixtureData = {};
+            for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+                if (isMatrixLike(v)) fallback[k] = v as MoziMatrixData;
+            }
+            if (Object.keys(fallback).length > 0) return fallback;
+        }
+
+        return {};
     }
 
     private anyMatrixSource(): MoziMatrixData | null {

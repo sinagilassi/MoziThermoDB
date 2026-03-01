@@ -122,13 +122,19 @@ function buildMatrixFixture() {
     const source = new Source(undefined, "Name-Formula");
     const allBinaryMixtureData = buildBinaryMixtureData(mixture, matrixData);
     const nameFormulaMixtureId = "Methanol-CH3OH|Ethanol-C2H5OH";
-    const binaryMixtureData =
-        allBinaryMixtureData[nameFormulaMixtureId] ??
-        Object.values(allBinaryMixtureData)[0] ??
-        {};
+    const fallbackMixtureId = Object.keys(allBinaryMixtureData)[0] ?? nameFormulaMixtureId;
+    const selectedMixtureId = allBinaryMixtureData[nameFormulaMixtureId]
+        ? nameFormulaMixtureId
+        : fallbackMixtureId;
+    const binaryMixtureDataMap = {
+        [selectedMixtureId]:
+            allBinaryMixtureData[selectedMixtureId] ??
+            Object.values(allBinaryMixtureData)[0] ??
+            {}
+    };
 
     const matrixModelSource: ModelSource = {
-        dataSource: binaryMixtureData,
+        dataSource: binaryMixtureDataMap,
         equationSource: {}
     };
 

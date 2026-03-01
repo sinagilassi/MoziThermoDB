@@ -16,6 +16,9 @@ export type BinaryMixtureData = {
     [key: string]: MoziMatrixData
 }
 
+// BinaryMixtureData map keyed by mixture id (e.g. "Methanol|Ethanol")
+export type BinaryMixtureDataMap = Record<string, BinaryMixtureData>
+
 
 
 /**
@@ -82,7 +85,7 @@ export const buildBinaryMixtureData = (
     mixture: Component[],
     data: RawThermoRecord[][],
     mixtureKeys: BinaryMixtureKey[] = ["Name", "Formula", "Name-Formula"],
-): Record<string, BinaryMixtureData> => {
+): BinaryMixtureDataMap => {
     // SECTION: Input validation
     // NOTE: binary components
     if (mixture.length !== 2) {
@@ -136,7 +139,7 @@ export const buildBinaryMixtureData = (
     // merge mixture ids
     const allMixtureIds = [...mixtureIds, ...reverseMixtureIds];
 
-    const res: Record<string, BinaryMixtureData> = {};
+    const res: BinaryMixtureDataMap = {};
 
     allMixtureIds.forEach(id => {
         res[id] = binaryMixtureData;
@@ -168,9 +171,9 @@ export const buildBinaryMixtureData = (
 export const buildBinaryMixturesData = (
     mixtures: Component[][],
     data: RawThermoRecord[][],
-): Record<string, BinaryMixtureData> => {
+): BinaryMixtureDataMap => {
     // NOTE: build data for each binary mixture and combine into a single map
-    const allBinaryMixtureData: Record<string, BinaryMixtureData> = {};
+    const allBinaryMixtureData: BinaryMixtureDataMap = {};
     mixtures.forEach(mixture => {
         const binaryMixtureData = buildBinaryMixtureData(mixture, data);
         Object.assign(allBinaryMixtureData, binaryMixtureData);

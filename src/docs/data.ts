@@ -14,7 +14,12 @@ import {
 
 
 // NOTE: Type for the map returned by `configureData`, keyed by component ID
-export type ComponentData = { [key: string]: ThermoRecordMap };
+export type ComponentData = ThermoRecordMap;
+
+// map of component id -> map of equation symbol -> equation function
+export type ComponentDataMap = {
+    [componentId: string]: ComponentData;
+};
 
 
 /**
@@ -80,7 +85,7 @@ export const buildComponentData = (
     componentKey: ComponentKey[] = ["Name-Formula", "Formula-State", "Name-State"],
     enableDataComponentMatchCheck: boolean = false,
     dataComponentMatchKey: ComponentKey = "Name-Formula"
-): ComponentData => {
+): ComponentDataMap => {
     if (enableDataComponentMatchCheck) {
         assertRawThermoRecordMatchesComponent(component, data, dataComponentMatchKey);
     }
@@ -93,7 +98,7 @@ export const buildComponentData = (
 
     // NOTE: return map keyed by component id
     const dataMap = moziData.getDataAsMap();
-    const componentData: ComponentData = {};
+    const componentData: ComponentDataMap = {};
 
     componentIds.forEach(id => {
         componentData[id] = dataMap;
@@ -128,8 +133,8 @@ export const buildComponentsData = (
     componentKey: ComponentKey[] = ["Name-Formula", "Formula-State", "Name-State"],
     enableDataComponentMatchCheck: boolean = false,
     dataComponentMatchKey: ComponentKey = "Name-Formula"
-): ComponentData => {
-    const componentData: ComponentData = {};
+): ComponentDataMap => {
+    const componentData: ComponentDataMap = {};
 
     components.forEach(component => {
         const componentRawData = extractComponentDataFromRawThermoRecord(

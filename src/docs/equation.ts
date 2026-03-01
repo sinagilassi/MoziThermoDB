@@ -34,6 +34,11 @@ export type ComponentEquation = {
     [key: string]: MoziEquation;
 };
 
+// map
+export type ComponentEquationMap = {
+    [componentId: string]: ComponentEquation;
+};
+
 // NOTE: Create, configure, and launch an equation in one step
 export interface LaunchEquation {
     symbol: string;
@@ -231,7 +236,7 @@ export const buildComponentEquation = function (
     componentKey: ComponentKey[] = ["Name-Formula", "Formula-State", "Name-State"],
     enableDataComponentMatchCheck: boolean = false,
     dataComponentMatchKey: ComponentKey = "Name-Formula"
-): Record<string, ComponentEquation> {
+): ComponentEquationMap {
     const configuredEquation = equation.clone();
 
     if (enableDataComponentMatchCheck) {
@@ -250,7 +255,7 @@ export const buildComponentEquation = function (
     const equationSymbol = configuredEquation.equationSymbol;
 
     // NOTE: return the configured equation (keyed by component id for lookup)
-    const componentEquation: Record<string, ComponentEquation> = {};
+    const componentEquation: ComponentEquationMap = {};
 
     // Attach the same configured equation instance to each component id alias for this component
     componentIds.forEach(id => {
@@ -286,16 +291,16 @@ export const buildComponentsEquation = function (
     componentKey: ComponentKey[] = ["Name-Formula", "Formula-State", "Name-State"],
     enableDataComponentMatchCheck: boolean = false,
     dataComponentMatchKey: ComponentKey = "Name-Formula"
-): Record<string, ComponentEquation> {
+): ComponentEquationMap {
     // NOTE: build a component equation for each component and merge into a single map
-    const componentEquations: Record<string, ComponentEquation> = {};
+    const componentEquations: ComponentEquationMap = {};
 
     // iterate over components and build an equation for each using the provided data
     components.forEach(component => {
         const componentData = extractComponentDataFromRawThermoRecord(component, data, dataComponentMatchKey);
 
         // ! component equation map for this component
-        const componentEq: Record<string, ComponentEquation> = buildComponentEquation(
+        const componentEq: ComponentEquationMap = buildComponentEquation(
             component,
             equation,
             componentData.records,
