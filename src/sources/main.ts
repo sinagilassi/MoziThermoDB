@@ -1,10 +1,13 @@
 import { set_component_id } from "mozithermodb-settings";
-import type { Component, ComponentKey } from "mozithermodb-settings";
+import type { Component, ComponentKey, BinaryMixtureKey } from "mozithermodb-settings";
 import type { ModelSource } from "@/types/sources";
+import type { BinaryMixtureData } from "@/docs/matrix-data";
+import { MoziMatrixData } from "@/core";
 import { Source } from "./source";
 import { DataSourceCore } from "./datasource-core";
 import { EquationSourceCore } from "./equationsource-core";
 import { EquationSourcesCore } from "./equationsources-core";
+import { MatrixDataSourceCore } from "./matrixdatasource-core";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     !!value && typeof value === "object";
@@ -26,6 +29,13 @@ const isValidModelSourceLike = (value: unknown): value is ModelSource => {
     if (!isRecord(value)) return false;
     if (!("dataSource" in value) || !("equationSource" in value)) return false;
     return true;
+};
+
+const isBinaryMixtureDataLike = (value: unknown): value is BinaryMixtureData => {
+    if (!isRecord(value)) return false;
+    const entries = Object.values(value);
+    if (entries.length === 0) return false;
+    return entries.some(entry => entry instanceof MoziMatrixData);
 };
 
 export const mkeqs = (
@@ -76,6 +86,28 @@ export const mkdt = (
 
         const source = new Source(modelSource, componentKey);
         return new DataSourceCore(component, source, componentKey);
+    } catch {
+        return null;
+    }
+};
+
+export const mkmat = (
+    components: Component[],
+    modelSource: ModelSource,
+    mixtureKey: BinaryMixtureKey = "Name-Formula",
+): MatrixDataSourceCore | null => {
+    try {
+        const componentKey = mixtureKey as ComponentKey;
+
+        if (!isValidModelSourceLike(modelSource)) return null;
+        if (!Array.isArray(components) || components.length !== 2) return null;
+        if (!components.every(component => isValidComponentLike(component, componentKey))) return null;
+        if (!isBinaryMixtureDataLike(modelSource.dataSource)) return null;
+
+        const source = new Source(modelSource, componentKey);
+        source.componentKey = componentKey;
+
+        return new MatrixDataSourceCore(components, source, mixtureKey);
     } catch {
         return null;
     }

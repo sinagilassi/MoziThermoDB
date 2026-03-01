@@ -14,7 +14,11 @@ import { Source } from "@/sources/source";
 import { DataSourceCore } from "@/sources/datasource-core";
 import { EquationSourcesCore } from "@/sources/equationsources-core";
 import { EquationSourceCore } from "@/sources/equationsource-core";
-import { mkeq, mkeqs, mkdt } from "@/sources/main";
+import { MatrixDataSourceCore } from "@/sources/matrixdatasource-core";
+import { mkeq, mkeqs, mkdt, mkmat } from "@/sources/main";
+import { MoziMatrixData } from "@/core";
+import type { RawThermoRecord } from "@/types";
+import { buildBinaryMixtureData } from "@/docs/matrix-data";
 
 type P = "A" | "B" | "C" | "D" | "E";
 type A = "T";
@@ -75,6 +79,67 @@ function buildFixture(): { component: Component; modelSource: ModelSource; sourc
     const source = new Source(modelSource, "Name-Formula");
 
     return { component: methane, modelSource, source };
+}
+
+function buildMatrixFixture() {
+    const methanol = {
+        name: "Methanol",
+        formula: "CH3OH",
+        state: "l"
+    } as Component;
+
+    const ethanol = {
+        name: "Ethanol",
+        formula: "C2H5OH",
+        state: "l"
+    } as Component;
+
+    const mixture: Component[] = [methanol, ethanol];
+
+    const methanolRecords: RawThermoRecord[] = [
+        { name: "Mixture", symbol: "-", value: "methanol|ethanol", unit: "N/A" },
+        { name: "Name", symbol: "-", value: "Methanol", unit: "N/A" },
+        { name: "Formula", symbol: "-", value: "CH3OH", unit: "N/A" },
+        { name: "State", symbol: "-", value: "l", unit: "N/A" },
+        { name: "a_i_j_1", symbol: "a_i_j_1", value: 0, unit: "1" },
+        { name: "a_i_j_2", symbol: "a_i_j_2", value: 1, unit: "1" },
+        { name: "b_i_j_1", symbol: "b_i_j_1", value: 4, unit: "1" },
+        { name: "b_i_j_2", symbol: "b_i_j_2", value: 5, unit: "1" }
+    ];
+
+    const ethanolRecords: RawThermoRecord[] = [
+        { name: "Mixture", symbol: "-", value: "methanol|ethanol", unit: "N/A" },
+        { name: "Name", symbol: "-", value: "Ethanol", unit: "N/A" },
+        { name: "Formula", symbol: "-", value: "C2H5OH", unit: "N/A" },
+        { name: "State", symbol: "-", value: "l", unit: "N/A" },
+        { name: "a_i_j_1", symbol: "a_i_j_1", value: 2, unit: "1" },
+        { name: "a_i_j_2", symbol: "a_i_j_2", value: 3, unit: "1" },
+        { name: "b_i_j_1", symbol: "b_i_j_1", value: 6, unit: "1" },
+        { name: "b_i_j_2", symbol: "b_i_j_2", value: 7, unit: "1" }
+    ];
+
+    const matrixData: RawThermoRecord[][] = [methanolRecords, ethanolRecords];
+    const source = new Source(undefined, "Name-Formula");
+    const allBinaryMixtureData = buildBinaryMixtureData(mixture, matrixData);
+    const nameFormulaMixtureId = "Methanol-CH3OH|Ethanol-C2H5OH";
+    const binaryMixtureData =
+        allBinaryMixtureData[nameFormulaMixtureId] ??
+        Object.values(allBinaryMixtureData)[0] ??
+        {};
+
+    const matrixModelSource: ModelSource = {
+        dataSource: binaryMixtureData,
+        equationSource: {}
+    };
+
+    return {
+        methanol,
+        ethanol,
+        mixture,
+        matrixData,
+        source,
+        matrixModelSource
+    };
 }
 
 describe("Core wrappers", () => {
@@ -159,5 +224,117 @@ describe("Core wrappers", () => {
                 "Name-Formula"
             )
         ).toBeNull();
+    });
+
+    it("Source builds binary mixture source and resolves matrix source by property symbols", () => {
+        const { mixture, matrixData, source } = buildMatrixFixture();
+        const binarySource = source.buildBinaryMixtureSource(mixture, matrixData);
+
+        expect(binarySource).not.toBeNull();
+        expect(binarySource).toHaveProperty("Methanol|Ethanol");
+        expect(binarySource).toHaveProperty("CH3OH|C2H5OH");
+        expect(binarySource).toHaveProperty("Methanol-CH3OH|Ethanol-C2H5OH");
+        expect(binarySource).toHaveProperty("Ethanol|Methanol");
+
+        const symbols = source.getMixturePropertySymbols(binarySource!, "methanol|ethanol");
+        expect(symbols).toEqual(expect.arrayContaining(["a", "b"]));
+
+        const srcA = source.getMixturePropertySource(binarySource!, "methanol|ethanol", "a");
+        const srcAIj = source.getMixturePropertySource(binarySource!, "methanol|ethanol", "a_i_j");
+        const srcAComponents = source.getMixturePropertySource(binarySource!, "methanol|ethanol", "a_methanol_ethanol");
+
+        expect(srcA).toBeInstanceOf(MoziMatrixData);
+        expect(srcAIj).toBeInstanceOf(MoziMatrixData);
+        expect(srcAComponents).toBeInstanceOf(MoziMatrixData);
+    });
+
+    it("MatrixDataSourceCore exposes mixture props and delegates matrix lookups", () => {
+        const { methanol, ethanol, mixture, matrixModelSource } = buildMatrixFixture();
+        const source = new Source(matrixModelSource, "Name-Formula");
+        const matrixCore = new MatrixDataSourceCore(mixture, source, "Name-Formula");
+
+        expect(matrixCore.mixtureIds()).toEqual(expect.arrayContaining(["methanol|ethanol"]));
+        expect(matrixCore.props()).toEqual(expect.arrayContaining(["a", "b"]));
+        expect(matrixCore.src("a_i_j")).toBeInstanceOf(MoziMatrixData);
+
+        const row = matrixCore.row("a_i_j", methanol, "methanol|ethanol");
+        expect(row).toEqual([0, 1]);
+
+        const prop = matrixCore.prop("a_i_j", [methanol, ethanol], "methanol|ethanol");
+        expect(prop).not.toBeNull();
+        expect(prop?.value).toBe(1);
+        expect(prop?.unit).toBe("1");
+
+        const mat = matrixCore.mat("a_methanol_ethanol", [methanol, ethanol], "methanol|ethanol");
+        expect(mat).toEqual([
+            [0, 1],
+            [2, 3]
+        ]);
+
+        const matDict = matrixCore.matDict("a_methanol_ethanol", [methanol, ethanol], "methanol|ethanol");
+        expect(matDict).toBeTruthy();
+        expect(matDict?.["Methanol-CH3OH_Methanol-CH3OH"]).toBe(0);
+
+        const ij = matrixCore.ij("a_1_2", "methanol|ethanol");
+        expect(ij?.value).toBe(1);
+
+        const ijs = matrixCore.ijs("a|methanol|ethanol", "Name");
+        expect(ijs).not.toBeNull();
+        expect(ijs?.["Methanol_Methanol"]).toBe(0);
+        expect(ijs?.["Methanol_Ethanol"]).toBe(1);
+    });
+
+    it("MatrixDataSourceCore returns null or empty for missing mixture/property", () => {
+        const { methanol, mixture, matrixModelSource } = buildMatrixFixture();
+        const source = new Source(matrixModelSource, "Name-Formula");
+        const matrixCore = new MatrixDataSourceCore(mixture, source, "Name-Formula");
+
+        expect(matrixCore.props("unknown|mixture")).toEqual(expect.arrayContaining(["a", "b"]));
+        expect(matrixCore.src("missing_prop")).toBeNull();
+        expect(matrixCore.row("missing_prop", methanol)).toBeNull();
+        expect(matrixCore.prop("missing_prop", [methanol, methanol])).toBeNull();
+    });
+
+    it("mkmat returns a matrix wrapper for valid input and null for non-binary mixtures", () => {
+        const { component, modelSource } = buildFixture();
+        const { methanol, ethanol, mixture, matrixModelSource } = buildMatrixFixture();
+
+        const valid = mkmat(mixture, matrixModelSource, "Name-Formula");
+        expect(valid).toBeInstanceOf(MatrixDataSourceCore);
+        expect(valid?.props()).toEqual(expect.arrayContaining(["a", "b"]));
+        const mixtureId = valid?.mixtureIds()[0];
+        expect(valid?.mat("a_methanol_ethanol", [methanol, ethanol], mixtureId)).toEqual([
+            [0, 1],
+            [2, 3]
+        ]);
+
+        const invalid = mkmat([methanol, ethanol, methanol], matrixModelSource, "Name-Formula");
+        expect(invalid).toBeNull();
+
+        const invalidDataShape = mkmat([component, component], modelSource, "Name-Formula");
+        expect(invalidDataShape).toBeNull();
+    });
+
+    it("mkmat works when modelSource.dataSource contains both component and mixture entries", () => {
+        const { component, modelSource } = buildFixture();
+        const { methanol, ethanol, mixture, matrixModelSource } = buildMatrixFixture();
+
+        const mixedDataSource = {
+            ...(modelSource.dataSource as Record<string, unknown>),
+            ...(matrixModelSource.dataSource as Record<string, unknown>)
+        } as ModelSource["dataSource"];
+
+        const mixedModelSource: ModelSource = {
+            dataSource: mixedDataSource,
+            equationSource: modelSource.equationSource
+        };
+
+        const mixed = mkmat(mixture, mixedModelSource, "Name-Formula");
+        expect(mixed).toBeInstanceOf(MatrixDataSourceCore);
+        expect(mixed?.props()).toEqual(expect.arrayContaining(["a", "b"]));
+
+        const dsCore = mkdt(component, mixedModelSource, "Name-Formula");
+        expect(dsCore).toBeInstanceOf(DataSourceCore);
+        expect(dsCore?.prop("A")?.value).toBe(33298);
     });
 });

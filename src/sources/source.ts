@@ -2,6 +2,7 @@
 import {
     Component,
     ComponentKey,
+    BinaryMixtureKey,
     set_component_id
 } from "mozithermodb-settings";
 // ! LOCALS
@@ -13,10 +14,20 @@ import type {
     ExecEqResult,
     ModelSource
 } from "@/types/sources";
-import type { ThermoRecordMap } from "@/types";
+import type { RawThermoRecord, ThermoRecordMap } from "@/types";
 import type { ComponentEquation } from "@/docs/equation";
 import type { ConfigArgMap, Structure, ArgMap, RetMap } from "@/types";
 import type { MoziEquation } from "@/core";
+import { MoziMatrixData } from "@/core";
+import {
+    type BinaryMixtureData,
+    buildBinaryMixtureData,
+    buildBinaryMixturesData
+} from "@/docs/matrix-data";
+import {
+    type ExtractedBinaryMixtureData,
+    extractBinaryMixtureData
+} from "@/utils";
 
 type RecordEntry = { value: number; unit: string; symbol: string };
 
@@ -97,6 +108,37 @@ export class Source {
         }
     }
 
+    private normalizeMixturePropertySymbol(propertySymbol: string): string {
+        const normalized = propertySymbol.trim();
+        if (normalized.length === 0) return normalized;
+
+        const pipeIndex = normalized.indexOf("|");
+        if (pipeIndex !== -1) {
+            return normalized.slice(0, pipeIndex).trim();
+        }
+
+        const delimiterIndex = normalized.indexOf("_");
+        if (delimiterIndex === -1) return normalized;
+
+        return normalized.slice(0, delimiterIndex);
+    }
+
+    private findMixtureAliasId(
+        binarySourceMap: Record<string, BinaryMixtureData>,
+        mixtureId: string
+    ): string | null {
+        if (!mixtureId) return null;
+        if (mixtureId in binarySourceMap) return mixtureId;
+
+        const normalizedMixtureId = mixtureId.trim().toLowerCase();
+
+        for (const key of Object.keys(binarySourceMap)) {
+            if (key.trim().toLowerCase() === normalizedMixtureId) return key;
+        }
+
+        return null;
+    }
+
     private isRecordEntry(value: unknown): value is RecordEntry {
         if (!value || typeof value !== "object") return false;
         const v = value as Record<string, unknown>;
@@ -115,6 +157,7 @@ export class Source {
         if (!ds || !(componentId in ds)) return null;
 
         const raw = (ds as Record<string, unknown>)[componentId];
+        if (raw instanceof MoziMatrixData) return null;
         if (this.isThermoRecordMap(raw)) return raw;
 
         if (raw && typeof raw === "object") {
@@ -149,6 +192,91 @@ export class Source {
             return this.normalizeComponentData(componentId);
         } catch {
             return null;
+        }
+    }
+
+    public extractBinaryMixtureRecords(
+        components: Component[],
+        matrixData: RawThermoRecord[][],
+        mixtureKeys: BinaryMixtureKey[] = ["Name", "Formula", "Name-Formula"],
+        mixtureDelimiters: string[] = ["|", " | "],
+        defaultMixtureDelimiter = "|",
+    ): ExtractedBinaryMixtureData | null {
+        try {
+            return extractBinaryMixtureData(
+                components,
+                matrixData,
+                mixtureKeys,
+                mixtureDelimiters,
+                defaultMixtureDelimiter
+            );
+        } catch {
+            return null;
+        }
+    }
+
+    public buildBinaryMixtureSource(
+        mixture: Component[],
+        matrixData: RawThermoRecord[][],
+        mixtureKeys: BinaryMixtureKey[] = ["Name", "Formula", "Name-Formula"],
+    ): Record<string, BinaryMixtureData> | null {
+        try {
+            return buildBinaryMixtureData(
+                mixture,
+                matrixData,
+                mixtureKeys
+            );
+        } catch {
+            return null;
+        }
+    }
+
+    public buildBinaryMixturesSource(
+        mixtures: Component[][],
+        matrixData: RawThermoRecord[][],
+    ): Record<string, BinaryMixtureData> | null {
+        try {
+            return buildBinaryMixturesData(mixtures, matrixData);
+        } catch {
+            return null;
+        }
+    }
+
+    public getMixturePropertySource(
+        binarySourceMap: Record<string, BinaryMixtureData>,
+        mixtureId: string,
+        propertySymbol: string
+    ): MoziMatrixData | null {
+        try {
+            const resolvedMixtureId = this.findMixtureAliasId(binarySourceMap, mixtureId);
+            if (!resolvedMixtureId) return null;
+
+            const propertyPrefix = this.normalizeMixturePropertySymbol(propertySymbol);
+            if (propertyPrefix.length === 0) return null;
+
+            const mixtureData = binarySourceMap[resolvedMixtureId];
+            if (!mixtureData || !(propertyPrefix in mixtureData)) return null;
+
+            return mixtureData[propertyPrefix];
+        } catch {
+            return null;
+        }
+    }
+
+    public getMixturePropertySymbols(
+        binarySourceMap: Record<string, BinaryMixtureData>,
+        mixtureId: string
+    ): string[] {
+        try {
+            const resolvedMixtureId = this.findMixtureAliasId(binarySourceMap, mixtureId);
+            if (!resolvedMixtureId) return [];
+
+            const mixtureData = binarySourceMap[resolvedMixtureId];
+            if (!mixtureData || typeof mixtureData !== "object") return [];
+
+            return Object.keys(mixtureData);
+        } catch {
+            return [];
         }
     }
 

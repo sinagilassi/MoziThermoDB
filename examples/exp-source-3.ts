@@ -1,119 +1,78 @@
-// Example: Using Source with multi-component modelSource (buildComponentsData + buildComponentsEquation)
+// Example: Build BinaryMixtureData, then build modelSource and matrix wrapper via mkmat
 import type { Component } from "mozithermodb-settings";
-import { createEq, buildComponentsEquation } from "../src/docs/equation";
-import { buildComponentsData } from "../src/docs/data";
-import type { ConfigParamMap, ConfigArgMap, ConfigRetMap, RawThermoRecord, Eq } from "../src/types";
-import { Source, calcEq } from "../src/sources";
+import type { RawThermoRecord } from "../src/types";
+import { buildBinaryMixtureData } from "../src/docs/matrix-data";
+import { mkmat, Source } from "../src/sources";
 
-type P = "A" | "B";
-type A = "T";
-type R = "Y";
-
-// Simple linear property equation used for two components:
-// Y = A + B*T
-const params: ConfigParamMap<P> = {
-    A: { name: "Intercept", symbol: "A", unit: "-" },
-    B: { name: "Slope", symbol: "B", unit: "1/K" }
-};
-
-const args: ConfigArgMap<A> = {
-    T: { name: "Temperature", symbol: "T", unit: "K" }
-};
-
-const ret: ConfigRetMap<R> = {
-    Y: { name: "Example Property", symbol: "Y", unit: "-" }
-};
-
-const eq: Eq<P, A> = (p, a) => ({
-    value: p.A.value + p.B.value * a.T.value,
-    unit: "-",
-    symbol: "Y"
-});
-
-const methane = {
-    name: "Methane",
-    formula: "CH4",
-    state: "g"
+const methanol = {
+    name: "Methanol",
+    formula: "CH3OH",
+    state: "l"
 } as Component;
 
-const ethane = {
-    name: "Ethane",
-    formula: "C2H6",
-    state: "g"
+const ethanol = {
+    name: "Ethanol",
+    formula: "C2H5OH",
+    state: "l"
 } as Component;
 
-const methaneData: RawThermoRecord[] = [
-    { name: "Name", symbol: "Name", value: "Methane", unit: "" },
-    { name: "Formula", symbol: "Formula", value: "CH4", unit: "" },
-    { name: "State", symbol: "State", value: "g", unit: "" },
-    { name: "Intercept", symbol: "A", value: 1.0, unit: "-" },
-    { name: "Slope", symbol: "B", value: 0.01, unit: "1/K" },
-    { name: "Tmin", symbol: "Tmin", value: 100, unit: "K" },
-    { name: "Tmax", symbol: "Tmax", value: 500, unit: "K" }
+const mixture: Component[] = [methanol, ethanol];
+
+// Matrix-shaped raw records for one binary mixture (2 rows: one per component)
+const methanolRow: RawThermoRecord[] = [
+    { name: "Mixture", symbol: "-", value: "Methanol|Ethanol", unit: "N/A" },
+    { name: "Name", symbol: "-", value: "Methanol", unit: "N/A" },
+    { name: "Formula", symbol: "-", value: "CH3OH", unit: "N/A" },
+    { name: "State", symbol: "-", value: "l", unit: "N/A" },
+    { name: "a_i_j_1", symbol: "a_i_j_1", value: 0, unit: "1" },
+    { name: "a_i_j_2", symbol: "a_i_j_2", value: 1, unit: "1" },
+    { name: "b_i_j_1", symbol: "b_i_j_1", value: 4, unit: "1" },
+    { name: "b_i_j_2", symbol: "b_i_j_2", value: 5, unit: "1" }
 ];
 
-const ethaneData: RawThermoRecord[] = [
-    { name: "Name", symbol: "Name", value: "Ethane", unit: "" },
-    { name: "Formula", symbol: "Formula", value: "C2H6", unit: "" },
-    { name: "State", symbol: "State", value: "g" as const, unit: "" },
-    { name: "Intercept", symbol: "A", value: 2.0, unit: "-" },
-    { name: "Slope", symbol: "B", value: 0.02, unit: "1/K" },
-    { name: "Tmin", symbol: "Tmin", value: 100, unit: "K" },
-    { name: "Tmax", symbol: "Tmax", value: 500, unit: "K" }
+const ethanolRow: RawThermoRecord[] = [
+    { name: "Mixture", symbol: "-", value: "Methanol|Ethanol", unit: "N/A" },
+    { name: "Name", symbol: "-", value: "Ethanol", unit: "N/A" },
+    { name: "Formula", symbol: "-", value: "C2H5OH", unit: "N/A" },
+    { name: "State", symbol: "-", value: "l", unit: "N/A" },
+    { name: "a_i_j_1", symbol: "a_i_j_1", value: 2, unit: "1" },
+    { name: "a_i_j_2", symbol: "a_i_j_2", value: 3, unit: "1" },
+    { name: "b_i_j_1", symbol: "b_i_j_1", value: 6, unit: "1" },
+    { name: "b_i_j_2", symbol: "b_i_j_2", value: 7, unit: "1" }
 ];
 
-const rawDataBlocks = [methaneData, ethaneData];
+const matrixData: RawThermoRecord[][] = [methanolRow, ethanolRow];
 
-// Build one reusable equation template
-const eqTemplate = createEq(params, args, ret, eq, "Linear Example", "Y = A + B*T");
+// 1) Build all mixture aliases -> BinaryMixtureData map keyed by mixture-id aliases
+const allBinaryData = buildBinaryMixtureData(mixture, matrixData);
+const mixtureId = "Methanol-CH3OH|Ethanol-C2H5OH";
+const binaryMixtureData =
+    allBinaryData[mixtureId] ??
+    Object.values(allBinaryData)[0] ??
+    {};
 
-// Build multi-component model source parts
-const dataSource = buildComponentsData(
-    [methane, ethane],
-    rawDataBlocks,
-    ["Name-State"],
-    true,
-    "Name-Formula"
-);
-
-const equationSource = buildComponentsEquation(
-    [methane, ethane],
-    eqTemplate,
-    rawDataBlocks,
-    ["Name-State"],
-    true,
-    "Name-Formula"
-);
-
-// SECTION: Build and use Source
+// 2) Build model source with DataSource = BinaryMixtureData
 const modelSource = {
-    dataSource,
-    equationSource
+    dataSource: binaryMixtureData,
+    equationSource: {}
 };
-// log
-console.log("Model source: ", modelSource);
 
-const source = new Source(modelSource, "Name-State");
+console.log("Model source built from mixture data:");
+console.log("dataSource property symbols:", Object.keys(modelSource.dataSource));
+console.log("equationSource keys:", Object.keys(modelSource.equationSource));
 
-console.log("Model source data keys:", Object.keys(modelSource.dataSource));
-console.log("Model source equation keys:", Object.keys(modelSource.equationSource));
+// Optional: Source instance (works with the model source contract)
+const source = new Source(modelSource, "Name-Formula");
+console.log("Source datasource symbols:", Object.keys(source.datasource));
 
-// Extract data/equation for each component
-for (const componentId of ["Methane-g", "Ethane-g"]) {
-    console.log(`\nComponent: ${componentId}`);
-    console.log("Data A:", source.dataExtractor(componentId, "A"));
-    console.log("Equation Y symbol:", source.eqExtractor(componentId, "Y")?.equationSymbol);
-}
+// 3) Build matrix wrapper from components + modelSource + mixtureKey
+const matSource = mkmat(mixture, modelSource, "Name-Formula");
 
-// Build and execute equation source for multiple components at once
-const eqSrc = source.eqBuilder([methane, ethane], "Y");
-console.log("\nBuilt equation source keys:", eqSrc ? Object.keys(eqSrc) : null);
-
-const execResult = source.execEq([methane, ethane], eqSrc!, { T: 300 });
-console.log("execEq([methane, ethane], T=300):", execResult);
-
-// Direct calcEq on one component's prepared equation source
-if (eqSrc?.["Methane-g"]) {
-    const direct = calcEq(eqSrc["Methane-g"], { T: 300 });
-    console.log("Direct calcEq (Methane-g):", direct);
+if (!matSource) {
+    console.log("Failed to create matrix source.");
+} else {
+    console.log("Resolved mixture ids:", matSource.mixtureIds());
+    console.log("Available props:", matSource.props());
+    console.log("a matrix:", matSource.mat("a_methanol_ethanol", mixture, "methanol|ethanol"));
+    console.log("a_1_2:", matSource.ij("a_1_2", "methanol|ethanol"));
 }

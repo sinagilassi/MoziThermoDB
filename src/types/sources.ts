@@ -2,6 +2,7 @@
 // ! LOCALS
 import { ComponentData } from "@/docs/data";
 import { ComponentEquation } from "@/docs/equation";
+import { BinaryMixtureData } from "@/docs/matrix-data";
 import { MoziEquation } from "@/core";
 import { ArgMap, RetMap, ConfigArgMap, ConfigRetMap } from "./equations";
 
@@ -10,7 +11,8 @@ import { ArgMap, RetMap, ConfigArgMap, ConfigRetMap } from "./equations";
 // ! value: map of data records for that component, keyed by record symbol (e.g. "A", "B", etc.)
 // ! This is the cleaned numeric data shape (`ThermoRecordMap`) produced by `buildData`/`buildComponentData`,
 // ! not raw DB records with mixed string/number values.
-export type DataSource = ComponentData;
+// ! DataSource can hold component data only, mixture matrix data only, or both in one object.
+export type DataSource = ComponentData | BinaryMixtureData | (ComponentData & BinaryMixtureData);
 
 // NOTE: Equation Source
 // ! key: component id (e.g. "Methane-CH4")
