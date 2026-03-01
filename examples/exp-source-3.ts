@@ -74,7 +74,6 @@ const componentData = buildComponentsData(
 
 // 1) Build all mixture aliases -> BinaryMixtureData map keyed by mixture-id aliases
 const allBinaryData = buildBinaryMixtureData(mixture, matrixData);
-const mixtureId = "Methanol-CH3OH|Ethanol-C2H5OH";
 
 // 2) Build merged data source with both individual component data + mixture matrix data
 const dataSourceAll = {
