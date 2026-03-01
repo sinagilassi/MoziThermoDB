@@ -75,6 +75,8 @@ export class Source {
     public setSource(modelSource?: ModelSource | null): [DataSource | null, EquationSource | null] {
         try {
             if (!modelSource) return [{}, {}];
+
+            // return
             return [modelSource.dataSource, modelSource.equationSource];
         } catch {
             return [null, null];
@@ -157,7 +159,17 @@ export class Source {
         if (!ds || !(componentId in ds)) return null;
 
         const raw = (ds as Record<string, unknown>)[componentId];
-        if (raw instanceof MoziMatrixData) return null;
+        const isMatrixLike =
+            raw instanceof MoziMatrixData ||
+            (
+                !!raw &&
+                typeof raw === "object" &&
+                typeof (raw as { mat?: unknown }).mat === "function" &&
+                typeof (raw as { matDict?: unknown }).matDict === "function" &&
+                typeof (raw as { ij?: unknown }).ij === "function" &&
+                typeof (raw as { getProperty?: unknown }).getProperty === "function"
+            );
+        if (isMatrixLike) return null;
         if (this.isThermoRecordMap(raw)) return raw;
 
         if (raw && typeof raw === "object") {

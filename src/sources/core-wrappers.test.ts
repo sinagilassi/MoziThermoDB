@@ -337,4 +337,18 @@ describe("Core wrappers", () => {
         expect(dsCore).toBeInstanceOf(DataSourceCore);
         expect(dsCore?.prop("A")?.value).toBe(33298);
     });
+
+    it("mkmat works when modelSource.dataSource is a nested mixture-id map", () => {
+        const { mixture, matrixData } = buildMatrixFixture();
+        const allBinaryMixtureData = buildBinaryMixtureData(mixture, matrixData);
+
+        const nestedModelSource: ModelSource = {
+            dataSource: allBinaryMixtureData as unknown as ModelSource["dataSource"],
+            equationSource: {}
+        };
+
+        const mat = mkmat(mixture, nestedModelSource, "Name-Formula");
+        expect(mat).toBeInstanceOf(MatrixDataSourceCore);
+        expect(mat?.props()).toEqual(expect.arrayContaining(["a", "b"]));
+    });
 });

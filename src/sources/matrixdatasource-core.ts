@@ -47,8 +47,19 @@ export class MatrixDataSourceCore {
 
         const res: BinaryMixtureData = {};
         for (const [key, value] of Object.entries(dataSource as Record<string, unknown>)) {
-            if (value instanceof MoziMatrixData) {
-                res[key] = value;
+            const isMatrixLike =
+                value instanceof MoziMatrixData ||
+                (
+                    !!value &&
+                    typeof value === "object" &&
+                    typeof (value as { mat?: unknown }).mat === "function" &&
+                    typeof (value as { matDict?: unknown }).matDict === "function" &&
+                    typeof (value as { ij?: unknown }).ij === "function" &&
+                    typeof (value as { getProperty?: unknown }).getProperty === "function"
+                );
+
+            if (isMatrixLike) {
+                res[key] = value as MoziMatrixData;
             }
         }
 
