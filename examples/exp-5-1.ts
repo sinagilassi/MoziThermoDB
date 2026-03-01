@@ -127,6 +127,12 @@ const binaryMixtureData = buildBinaryMixtureData(
 // >> log
 console.log(binaryMixtureData)
 
+// NOTE: all sources
+const allSources = binaryMixtureData[mixtureId];
+console.log("All sources for mixture:", allSources)
+// get types
+console.log("allSources type:", typeof allSources)
+
 // NOTE: property symbol "a"
 const aSrc: MoziMatrixData = binaryMixtureData[mixtureId]["a"];
 console.log("Property 'a' for methanol|ethanol:", aSrc)
