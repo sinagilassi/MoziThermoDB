@@ -232,3 +232,32 @@ export const getMixtureProps = (
     return Array.from(uniqueBySymbol.values());
 };
 
+// SECTION: Build raw thermo data from query results
+export const buildComponentRawThermoDataFromQueryResults = (
+    component: Component,
+    queryResults: Record<string, string | number>,
+    payload: RawThermoRecord[],
+    componentKey: ComponentKey = "Name-Formula",
+): ComponentRawThermoData => {
+    // NOTE: init res
+    const rawRecords: Record<string, string | number>[] = [];
+
+    // NOTE: iterate over query results
+    for (const [key, value] of Object.entries(queryResults)) {
+        // add symbol, value
+        rawRecords.push({
+            symbol: key,
+            value
+        });
+    }
+
+    // NOTE: build component raw thermo data
+    const componentRawData = buildComponentRawThermoData(
+        component,
+        rawRecords,
+        payload,
+        componentKey
+    );
+
+    return componentRawData;
+}

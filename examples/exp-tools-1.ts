@@ -1,11 +1,12 @@
 import type { Component } from "mozithermodb-settings";
-import type { RawThermoRecord } from "../src/types";
+import type { RawThermoRecord, ComponentRawThermoData } from "../src/types";
 import {
     cleanRawThermoRecord,
     getComponentIdFromRawThermoRecord,
     assertRawThermoRecordMatchesComponent,
     extractComponentDataFromRawThermoRecord,
     buildComponentRawThermoData,
+    buildComponentRawThermoDataFromQueryResults,
 } from "../src/utils";
 
 const methane = {
@@ -81,3 +82,22 @@ const built = buildComponentRawThermoData(
     "Name-Formula"
 );
 console.log(built);
+
+// SECTION: Query Results
+const queryResults = {
+    Name: "Methane",
+    Formula: "CH4",
+    A: "33298",
+    B: 79933,
+    Extra: "ignored",
+}
+
+// NOTE: build raw thermo data
+const builtFromQuery: ComponentRawThermoData = buildComponentRawThermoDataFromQueryResults(
+    methane,
+    queryResults,
+    payloadTemplate,
+    "Name-Formula"
+);
+console.log("\n6) buildComponentRawThermoDataFromQueryResults");
+console.log(builtFromQuery);
