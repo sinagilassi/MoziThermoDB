@@ -2,7 +2,7 @@
 import { type Component, ComponentKey, ComponentSchema } from "mozithermodb-settings"
 // ! LOCALS
 import type { RawThermoRecord } from "../src/types";
-import { buildBinaryMixtureData, MoziMatrixData } from './../src';
+import { buildBinaryMixtureData, MoziMatrixData, BinaryMixtureDataMap } from './../src';
 
 
 // NOTE: components
@@ -128,7 +128,7 @@ const binaryMixtureData = buildBinaryMixtureData(
 console.log(binaryMixtureData)
 
 // NOTE: all sources
-const allSources = binaryMixtureData[mixtureId];
+const allSources: BinaryMixtureDataMap = binaryMixtureData[mixtureId];
 console.log("All sources for mixture:", allSources)
 // get types
 console.log("allSources type:", typeof allSources)
