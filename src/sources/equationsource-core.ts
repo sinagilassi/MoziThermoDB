@@ -119,10 +119,10 @@ export class EquationSourceCore {
         return argMap;
     }
 
-    public calc(inputArgs?: Record<string, number>): RetMap | null {
+    public calc(inputArgs?: Record<string, number>, argsRangeCheck?: boolean): RetMap | null {
         try {
             const args = this.buildCalcArgMap(inputArgs);
-            return this.eq.calc(args);
+            return this.eq.calc(args, argsRangeCheck);
         } catch {
             return null;
         }

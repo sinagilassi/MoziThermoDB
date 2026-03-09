@@ -90,5 +90,13 @@ console.log("Equation symbols:", eqCore?.argSymbols);
 const res = eqCore?.calc({ P: 101325, T: 298.15 });
 console.log("Result (Phi_r = (1 + Omega)*(T/Tc)*(P/Pc)):", res);
 
+// T beyond Tmax: pass second arg `true` to enable per-call range check override.
+const resOutOfRange = eqCore?.calc({ P: 101325, T: 700 }, true);
+console.log("Result with T beyond Tmax + range check override (expected null):", resOutOfRange);
+
+// Missing runtime P should return null (with warning) due to missing required arg, even though Tc and Pc are auto-filled.
+const resMissingP = eqCore?.calc({ T: 298.15 });
+console.log("Result with missing P (expected null):", resMissingP);
+
 // Missing runtime P/T still fails (returns null), because only Tc and Pc are auto-filled.
 console.log("Result without runtime P/T (expected null):", eqCore?.calc());
