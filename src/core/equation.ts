@@ -30,7 +30,7 @@ export class MoziEquation {
     // NOTE: timing options
     enableTiming = false;
     // NOTE: range check options
-    enableRangeCheck = true;
+    enableRangeCheck = false;
     private argRanges: Record<string, { min?: number; max?: number; unit?: string }> = {};
 
     // NOTE: constructor
@@ -212,7 +212,10 @@ export class MoziEquation {
 
     // SECTION: Evaluation Equation
     @timeIt({ label: 'MoziEquation.calc', enabledKey: 'enableTiming' })
-    public calc(args: ArgMap): RetMap {
+    public calc(args: ArgMap, argsRangeCheck?: boolean): RetMap {
+        // NOTE: per-call override without mutating global setting
+        const shouldRangeCheck = argsRangeCheck ?? this.enableRangeCheck;
+
         // NOTE: parameter setup
         const params = this.params;
 
@@ -227,7 +230,7 @@ export class MoziEquation {
             }
         }
 
-        if (this.enableRangeCheck) {
+        if (shouldRangeCheck) {
             // check argument ranges (if provided)
             for (const [key, arg] of Object.entries(args)) {
                 const symbol = arg.symbol ?? key;
@@ -247,7 +250,10 @@ export class MoziEquation {
 
     // SECTION: Evaluation Equation (Async)
     @timeIt({ label: 'MoziEquation.calcAsync', enabledKey: 'enableTiming' })
-    public async calcAsync(args: ArgMap): Promise<RetMap> {
+    public async calcAsync(args: ArgMap, argsRangeCheck?: boolean): Promise<RetMap> {
+        // NOTE: per-call override without mutating global setting
+        const shouldRangeCheck = argsRangeCheck ?? this.enableRangeCheck;
+
         // NOTE: parameter setup
         const params = this.params;
 
@@ -262,7 +268,7 @@ export class MoziEquation {
             }
         }
 
-        if (this.enableRangeCheck) {
+        if (shouldRangeCheck) {
             // check argument ranges (if provided)
             for (const [key, arg] of Object.entries(args)) {
                 const symbol = arg.symbol ?? key;
@@ -290,8 +296,8 @@ export class MoziEquation {
 
         // NOTE: return an object with the equation's name, description, and a function to evaluate it
         return {
-            calc: (args: ArgMap) => this.calc(args),
-            calcAsync: (args: ArgMap) => this.calcAsync(args)
+            calc: (args: ArgMap, argsRangeCheck?: boolean) => this.calc(args, argsRangeCheck),
+            calcAsync: (args: ArgMap, argsRangeCheck?: boolean) => this.calcAsync(args, argsRangeCheck)
         };
     }
 }
