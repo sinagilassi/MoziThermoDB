@@ -2,7 +2,7 @@
 import { type Component, ComponentSchema } from "mozithermodb-settings";
 // ! LOCALS
 import type { RawThermoRecord } from "../src/types";
-import { buildBinaryMixturesData, MoziMatrixData } from "./../src";
+import { buildBinaryMixturesData, MoziMatrixData, BinaryMixtureDataMap } from "./../src";
 
 // NOTE: components
 const methanol = ComponentSchema.parse({

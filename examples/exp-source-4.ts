@@ -1,7 +1,7 @@
 // Example: mixture-only modelSource and multiple mixture data extraction methods
 import { type Component, ComponentSchema } from "mozithermodb-settings";
 import type { RawThermoRecord } from "../src/types";
-import { buildBinaryMixtureData, MoziMatrixData } from "../src";
+import { buildBinaryMixtureData, MoziMatrixData, BinaryMixtureDataMap } from "../src";
 import { mkmat, Source } from "../src/sources";
 
 // NOTE: components
@@ -45,7 +45,9 @@ const ethanolRow: RawThermoRecord[] = [
 const matrixData: RawThermoRecord[][] = [methanolRow, ethanolRow];
 
 // SECTION: build a mixture-only model source
-const binaryMixtureData = buildBinaryMixtureData(mixture, matrixData);
+const binaryMixtureData: BinaryMixtureDataMap = buildBinaryMixtureData(mixture, matrixData);
+
+// NOTE: model source
 const modelSource = {
     dataSource: binaryMixtureData,
     equationSource: {}

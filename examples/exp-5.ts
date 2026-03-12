@@ -2,7 +2,7 @@
 import { type Component, ComponentKey, ComponentSchema } from "mozithermodb-settings"
 // ! LOCALS
 import type { RawThermoRecord } from "../src/types";
-import { MoziMatrixData } from './../src';
+import { MoziMatrixData, BinaryMixtureDataMap } from './../src';
 
 
 // NOTE: components
