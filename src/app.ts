@@ -1,10 +1,11 @@
 // import libs
+
+// ! LOCALS
 import { ComponentDataMap } from "@/docs/data";
 import { ComponentEquationMap } from "@/docs/equation";
 import { BinaryMixtureDataMap } from "@/docs/matrix-data";
 import { DataSource, ModelSource } from "./types";
 
-// ! LOCALS
 // SECTION: Build model source
 export function buildModelSource(
     componentData: ComponentDataMap,
@@ -28,3 +29,4 @@ export function buildModelSource(
 
     return modelSource
 }
+

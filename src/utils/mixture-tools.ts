@@ -1,8 +1,7 @@
 // import libs
 import { type BinaryMixtureKey, type Component, type ComponentKey, set_component_id } from "mozithermodb-settings";
 // ! LOCALS
-import type { RawThermoRecord } from "@/types";
-import { match } from "assert";
+import type { MoziMatObj, RawThermoRecord, MoziMat } from "@/types";
 
 /**
  * Generates a unique mixture ID based on the component IDs and a specified delimiter.
@@ -311,4 +310,131 @@ export const reorderMixtureComponents = (
 
     // if not found, return the original order
     return null;
+}
+
+// SECTION: Get component matrix data
+export const getComponentMatrixData = (
+    component: Component[],
+    propData: MoziMatObj,
+    componentKeys: ComponentKey[] = ["Name", "Formula", "Name-Formula"],
+    keyDelimiter: string = "_"
+): number[][] => {
+    // SECTION: Input validation
+    if (!component || !propData) {
+        throw new Error("Component and propData are required to get component matrix data.");
+    }
+
+    // NOTE: iterate over component keys and return the first key that has any numeric match
+    for (const componentKey of componentKeys) {
+        const matrixData: number[][] = [];
+        let numericMatches = 0;
+
+        for (const comp1 of component) {
+            const compDataRow: number[] = [];
+
+            for (const comp2 of component) {
+                const id = `${set_component_id(comp1, componentKey)}${keyDelimiter}${set_component_id(comp2, componentKey)}`;
+                const value = propData[id];
+                if (value !== undefined && typeof value === "number") {
+                    compDataRow.push(value);
+                    numericMatches += 1;
+                } else {
+                    compDataRow.push(NaN);
+                }
+            }
+
+            matrixData.push(compDataRow);
+        }
+
+        if (numericMatches > 0) {
+            return matrixData;
+        }
+    }
+
+    // fallback when no key produced numeric values
+    return component.map(() => component.map(() => NaN));
+}
+
+// SECTION: Create mixture id data
+export const createBinaryMixtureIdData = (
+    component: Component,
+    mixtureId: string
+): RawThermoRecord[] => {
+    return [
+        { name: "Mixture", symbol: "-", value: mixtureId, unit: "" },
+        { name: "Name", symbol: "-", value: component.name, unit: "" },
+        { name: "Formula", symbol: "-", value: component.formula, unit: "" },
+        { name: "State", symbol: "-", value: component.state, unit: "" },
+    ]
+}
+
+export const createBinaryMixtureIdsData = (
+    components: Component[],
+    mixtureId: string,
+    componentKey: ComponentKey
+): Record<string, RawThermoRecord[]> => {
+    // NOTE: init records
+    const records: Record<string, RawThermoRecord[]> = {};
+
+    // NOTE: iterate over components and create mixture id data for each component
+    components.forEach((component, index) => {
+        // create component id
+        const componentId = set_component_id(component, componentKey);
+
+        // set records for the component
+        records[componentId] = createBinaryMixtureIdData(component, mixtureId);
+    });
+
+    return records;
+}
+
+// NOTE: Create mixture prop data
+export const createBinaryMixturePropData = (
+    components: Component[],
+    propName: string,
+    propData: MoziMatObj,
+    propSuffixIds: string[] = ["i_j_1", "i_j_2"],
+    componentKey: ComponentKey,
+    keyDelimiter: string
+): Record<string, RawThermoRecord[]> => {
+    // SECTION: Input validation
+    if (components.length !== 2) {
+        throw new Error("Component array must contain exactly 2 components for binary mixtures.");
+    }
+
+    // NOTE: init records
+    const records: Record<string, RawThermoRecord[]> = {};
+
+    // NOTE: standardize prop data
+    const propDataMatrix: number[][] = getComponentMatrixData(components, propData, [componentKey], keyDelimiter);
+
+    // iterate over components by index
+    for (let i = 0; i < components.length; i++) {
+        // component raw thermo data
+        const compData: RawThermoRecord[] = [];
+
+        // iterate over prop data matrix
+        for (let j = 0; j < components.length; j++) {
+            // >> prop id
+            const propId = `${propName}_${propSuffixIds[j]}`;
+            // >> prop data
+            const propData = propDataMatrix[i][j];
+            // records
+            const compRecord: RawThermoRecord = {
+                name: propId,
+                symbol: propId,
+                value: propData,
+                unit: "1"
+            }
+
+            // >> add to component data
+            compData.push(compRecord);
+        }
+
+        // >> add to records
+        const componentId = set_component_id(components[i], componentKey);
+        records[componentId] = compData;
+    }
+
+    return records;
 }
