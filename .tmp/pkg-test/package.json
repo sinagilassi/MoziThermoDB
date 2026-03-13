@@ -11,6 +11,6 @@
     "license": "ISC",
     "type": "commonjs",
     "dependencies": {
-        "mozithermodb": "file:../../mozithermodb-1.3.1.tgz"
+        "mozithermodb": "file:../../mozithermodb-1.4.0.tgz"
     }
 }
