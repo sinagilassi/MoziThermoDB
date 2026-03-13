@@ -91,6 +91,7 @@ export const buildBinaryMixtureData = (
     if (mixture.length !== 2) {
         throw new Error(`Expected exactly 2 components for binary mixture data, but got ${mixture.length}`);
     }
+
     // SECTION: Collect component data relevant for the mixture
     const {
         mixtureId,
