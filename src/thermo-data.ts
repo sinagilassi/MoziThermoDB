@@ -19,7 +19,8 @@ export function buildBinaryMatrixRawThermoData(
     mixtureDelimiter: string = "|",
     componentOrder: "12" | "21" = "12",
     propSuffixIds: string[] = ["i_j_1", "i_j_2"],
-    propKeyDelimiter: string = "_"
+    propKeyDelimiter: string = "_",
+    mixtureIdMode: "lowercase" | "uppercase" | "original" = "lowercase"
 ): Record<string, RawThermoRecord[]> {
     // SECTION: Input validation
     if (components.length !== 2) {
@@ -46,7 +47,7 @@ export function buildBinaryMatrixRawThermoData(
     // SECTION: Build binary matrix data
     // NOTE: Create binary mixture ids data
     // >>> set to "Name-Formula" to match the mixture id format used in propData keys
-    const binaryMixtureIdsData = createBinaryMixtureIdsData(components, mixtureId, 'Name-Formula');
+    const binaryMixtureIdsData = createBinaryMixtureIdsData(components, mixtureId, 'Name-Formula', mixtureIdMode);
 
     // SECTION: Create binary mixture property data
     // init binary mixture prop data

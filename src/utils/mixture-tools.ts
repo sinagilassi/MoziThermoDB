@@ -2,6 +2,7 @@
 import { type BinaryMixtureKey, type Component, type ComponentKey, set_component_id } from "mozithermodb-settings";
 // ! LOCALS
 import type { MoziMatObj, RawThermoRecord, MoziMat } from "@/types";
+import { b } from "node_modules/vitest/dist/chunks/suite.d.BJWk38HB";
 
 /**
  * Generates a unique mixture ID based on the component IDs and a specified delimiter.
@@ -358,10 +359,28 @@ export const getComponentMatrixData = (
 // SECTION: Create mixture id data
 export const createBinaryMixtureIdData = (
     component: Component,
-    mixtureId: string
+    mixtureId: string,
+    mixtureIdMode: "lowercase" | "uppercase" | "original" = "lowercase"
 ): RawThermoRecord[] => {
+    // apply mixture id mode
+    let formattedMixtureId = mixtureId;
+    // switch case
+    switch (mixtureIdMode) {
+        case "lowercase":
+            formattedMixtureId = mixtureId.toLowerCase();
+            break;
+        case "uppercase":
+            formattedMixtureId = mixtureId.toUpperCase();
+            break;
+        case "original":
+        default:
+            formattedMixtureId = mixtureId;
+            break;
+    }
+
+    // set
     return [
-        { name: "Mixture", symbol: "-", value: mixtureId, unit: "" },
+        { name: "Mixture", symbol: "-", value: formattedMixtureId, unit: "" },
         { name: "Name", symbol: "-", value: component.name, unit: "" },
         { name: "Formula", symbol: "-", value: component.formula, unit: "" },
         { name: "State", symbol: "-", value: component.state, unit: "" },
@@ -371,7 +390,8 @@ export const createBinaryMixtureIdData = (
 export const createBinaryMixtureIdsData = (
     components: Component[],
     mixtureId: string,
-    componentKey: ComponentKey
+    componentKey: ComponentKey,
+    mixtureIdMode: "lowercase" | "uppercase" | "original"
 ): Record<string, RawThermoRecord[]> => {
     // NOTE: init records
     const records: Record<string, RawThermoRecord[]> = {};
@@ -382,7 +402,7 @@ export const createBinaryMixtureIdsData = (
         const componentId = set_component_id(component, componentKey);
 
         // set records for the component
-        records[componentId] = createBinaryMixtureIdData(component, mixtureId);
+        records[componentId] = createBinaryMixtureIdData(component, mixtureId, mixtureIdMode);
     });
 
     return records;
@@ -405,20 +425,23 @@ export const createBinaryMixturePropData = (
     // NOTE: init records
     const records: Record<string, RawThermoRecord[]> = {};
 
+    // >> component ids for the mixture key
+    const componentIds = components.map(component => set_component_id(component, componentKey));
+
     // NOTE: standardize prop data
     const propDataMatrix: number[][] = getComponentMatrixData(components, propData, [componentKey], propKeyDelimiter);
 
-    // iterate over components by index
+    // iterate over component
     for (let i = 0; i < components.length; i++) {
-        // component raw thermo data
-        const compData: RawThermoRecord[] = [];
 
-        // iterate over prop data matrix
+        // iterate over component
         for (let j = 0; j < components.length; j++) {
-            // >> prop id
-            const propId = `${propName}_${propSuffixIds[j]}`;
-            // >> prop data
-            const propData = propDataMatrix[i][j];
+            // prop id
+            const propId = `${propName}_${propSuffixIds[i]}`;
+
+            // prop data
+            const propData = propDataMatrix[j][i];
+
             // records
             const compRecord: RawThermoRecord = {
                 name: propId,
@@ -427,13 +450,14 @@ export const createBinaryMixturePropData = (
                 unit: "1"
             }
 
-            // >> add to component data
-            compData.push(compRecord);
-        }
+            // add to records to component [j]
+            const componentId = componentIds[j];
 
-        // >> add to records
-        const componentId = set_component_id(components[i], componentKey);
-        records[componentId] = compData;
+            if (!records[componentId]) {
+                records[componentId] = [];
+            }
+            records[componentId].push(compRecord);
+        }
     }
 
     return records;
