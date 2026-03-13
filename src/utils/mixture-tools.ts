@@ -317,7 +317,7 @@ export const getComponentMatrixData = (
     component: Component[],
     propData: MoziMatObj,
     componentKeys: ComponentKey[] = ["Name", "Formula", "Name-Formula"],
-    keyDelimiter: string = "_"
+    propKeyDelimiter: string = "_"
 ): number[][] => {
     // SECTION: Input validation
     if (!component || !propData) {
@@ -333,7 +333,7 @@ export const getComponentMatrixData = (
             const compDataRow: number[] = [];
 
             for (const comp2 of component) {
-                const id = `${set_component_id(comp1, componentKey)}${keyDelimiter}${set_component_id(comp2, componentKey)}`;
+                const id = `${set_component_id(comp1, componentKey)}${propKeyDelimiter}${set_component_id(comp2, componentKey)}`;
                 const value = propData[id];
                 if (value !== undefined && typeof value === "number") {
                     compDataRow.push(value);
@@ -394,8 +394,8 @@ export const createBinaryMixturePropData = (
     propName: string,
     propData: MoziMatObj,
     propSuffixIds: string[] = ["i_j_1", "i_j_2"],
+    propKeyDelimiter: string,
     componentKey: ComponentKey,
-    keyDelimiter: string
 ): Record<string, RawThermoRecord[]> => {
     // SECTION: Input validation
     if (components.length !== 2) {
@@ -406,7 +406,7 @@ export const createBinaryMixturePropData = (
     const records: Record<string, RawThermoRecord[]> = {};
 
     // NOTE: standardize prop data
-    const propDataMatrix: number[][] = getComponentMatrixData(components, propData, [componentKey], keyDelimiter);
+    const propDataMatrix: number[][] = getComponentMatrixData(components, propData, [componentKey], propKeyDelimiter);
 
     // iterate over components by index
     for (let i = 0; i < components.length; i++) {
