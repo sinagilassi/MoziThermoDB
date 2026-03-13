@@ -1,7 +1,11 @@
+// import libs
 import { ComponentSchema, type Component } from "mozithermodb-settings";
 import type { MoziMatObj } from "../src/types";
 import { buildBinaryMatrixRawThermoData } from "../src";
+import { MoziMatrixData, BinaryMixtureDataMap, buildBinaryMixturesData } from './../src';
+import type { RawThermoRecord } from "../src/types";
 
+// SECTION: components
 const methanol = ComponentSchema.parse({
     name: "Methanol",
     formula: "CH3OH",
@@ -53,3 +57,41 @@ for (const [componentId, records] of Object.entries(binaryRawData)) {
     console.log(`\nComponent: ${componentId}`);
     console.table(records);
 }
+
+// map data
+const methanolEthanolData = binaryRawData["Methanol-CH3OH"];
+const ethanolMethanolData = binaryRawData["Ethanol-C2H5OH"];
+
+// SECTION: Build MoziMatrixData from the binary raw data
+const matrixData: RawThermoRecord[][] = [methanolEthanolData, ethanolMethanolData]
+
+const mixtures: Component[][] = [
+    [methanol, ethanol],
+];
+
+// SECTION: build binary mixture data
+const binaryMixtureData = buildBinaryMixturesData(mixtures, matrixData);
+console.log("Built binary mixture data:", binaryMixtureData);
+console.log("Built mixture ids:", Object.keys(binaryMixtureData));
+
+// NOTE: access MoziMatrixData for a specific property and mixture id
+const mixtureId = "Methanol|Ethanol";
+const propertySymbol = "a";
+
+const moziMatrixDataForMixture = binaryMixtureData[mixtureId]?.[propertySymbol];
+
+if (!moziMatrixDataForMixture) {
+    console.error(`No MoziMatrixData found for mixture id "${mixtureId}" and property "${propertySymbol}".`);
+}
+
+// >> mat
+const aMatrix = moziMatrixDataForMixture?.mat("a_i_j", [methanol, ethanol]);
+console.log(`a matrix for mixture "${mixtureId}":`, aMatrix);
+
+const aMatrixReverse = moziMatrixDataForMixture?.mat("a_i_j", [ethanol, methanol]);
+console.log(`a matrix reveres for mixture "${mixtureId}":`, aMatrixReverse);
+
+// >> matDict
+const aMatDict = moziMatrixDataForMixture?.matDict("a_i_j", [methanol, ethanol]);
+console.log(`a matrix dict for mixture "${mixtureId}":`, aMatDict);
+
