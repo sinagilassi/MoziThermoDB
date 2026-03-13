@@ -70,7 +70,7 @@ const mixtures: Component[][] = [
 ];
 
 // SECTION: build binary mixture data
-const binaryMixtureData = buildBinaryMixturesData(mixtures, matrixData);
+const binaryMixtureData: BinaryMixtureDataMap = buildBinaryMixturesData(mixtures, matrixData);
 console.log("Built binary mixture data:", binaryMixtureData);
 console.log("Built mixture ids:", Object.keys(binaryMixtureData));
 
